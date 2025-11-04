@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global font and background */
+html, body, #root {
+  height: 100%;
+}
+body {
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  @apply bg-mint-sky text-slate-800;
+}
+
+/* Custom animations */
+.slide-up {
+  animation: slide-up 600ms ease-out both;
+}
+.slide-up-delayed-1 { animation-delay: 120ms; }
+.slide-up-delayed-2 { animation-delay: 240ms; }
+.slide-up-delayed-3 { animation-delay: 360ms; }
+.slide-up-delayed-4 { animation-delay: 480ms; }
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bounce-soft {
+  transition: transform 200ms ease;
+}
+.bounce-soft:hover {
+  transform: translateY(-1px) scale(1.02);
+}
+
+.progress-fill {
+  width: 0%;
+  transition: width 1000ms ease;
+}
+
+/* Circular progress ring using conic gradient */
+.ring {
+  --size: 84px;
+  --thickness: 10px;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 9999px;
+  position: relative;
+  background: conic-gradient(var(--ring-color, #22c55e) var(--ring-deg, 0deg), #e5e7eb 0);
+}
+.ring::after {
+  content: '';
+  position: absolute;
+  inset: calc(var(--thickness));
+  border-radius: 9999px;
+  background: white;
+  z-index: 0;
+}
+
+/* Inner content of the ring (for labels) */
+.ring-inner {
+  position: absolute;
+  inset: calc(var(--thickness));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  z-index: 1;
+}
+
+/* Cards */
+.card {
+  @apply bg-white rounded-xl shadow-soft;
+}
+
+/* Accent bar for cards */
+.accent-bar {
+  height: 4px;
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+}
+
+/* Floating bottom nav */
+.floating-nav {
+  @apply fixed bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur rounded-full shadow-soft px-2.5 py-0.5 flex gap-3 items-center;
+}
+
+/* Simple micro-animations used around the app */
+.slide-up { animation: slide-up 320ms ease-out both; }
+.bounce-soft { animation: bounce-soft 420ms ease-out; }
+.progress-fill { transition: width 700ms ease; }
+
+@keyframes slide-up {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes bounce-soft {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
