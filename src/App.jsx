@@ -195,7 +195,7 @@ function SavingsSummary({ goals }) {
   )
 }
 
-function GoalCard({ title, current, total, percent, autopay, imageSrc, interactiveTip, emoji }) {
+function GoalCard({ title, current, total, percent, autopay, imageSrc, interactiveTip, emoji, deletable, onDelete }) {
   const [tipOpen, setTipOpen] = useState(false)
   const showImage = Boolean(imageSrc)
   const summaryText = `Saved ₹${current.toLocaleString('en-IN')} / ₹${total.toLocaleString('en-IN')} (${percent}%) · Next AutoPay: ₹${autopay?.amount || 0} on Wed`
@@ -206,6 +206,15 @@ function GoalCard({ title, current, total, percent, autopay, imageSrc, interacti
          onClick={(e) => {
            if (interactiveTip) { e.preventDefault(); e.stopPropagation(); setTipOpen(v => !v) }
          }}>
+      {deletable && (
+        <button
+          className="absolute top-2 right-2 text-xs px-2 py-1 bg-red-500 text-white rounded"
+          onClick={(e) => { e.stopPropagation(); if (onDelete) onDelete() }}
+          title="Delete goal"
+        >
+          Delete
+        </button>
+      )}
       {showImage && (
         <>
           {/* Top: Image area */}
@@ -298,6 +307,17 @@ function GoalCard({ title, current, total, percent, autopay, imageSrc, interacti
 }
 
 function ActiveGoals({ goals }) {
+  const deleteGoal = (id) => {
+    try {
+      const raw = localStorage.getItem('tripjar.userGoals')
+      const arr = raw ? JSON.parse(raw) : []
+      const next = arr.filter((g) => g.id !== id)
+      localStorage.setItem('tripjar.userGoals', JSON.stringify(next))
+      window.dispatchEvent(new CustomEvent('tripjar:dataUpdated', { detail: { source: 'deleteGoal', id } }))
+    } catch (e) {
+      console.error('Failed to delete goal', e)
+    }
+  }
   return (
     <section className="px-5 mt-6">
       <h3 className="text-sm font-semibold text-slate-700 mb-2 slide-up">Active Goals</h3>
@@ -335,6 +355,7 @@ function ActiveGoals({ goals }) {
               </div>
             )
           }
+          const canDelete = g.id && (g.current || 0) === 0
           return (
             <NavLink key={idx} to="/goal-detail" className="w-full">
               <GoalCard
@@ -343,6 +364,8 @@ function ActiveGoals({ goals }) {
                 total={g.total}
                 percent={percent}
                 autopay={g.autopay}
+                deletable={!!canDelete}
+                onDelete={() => deleteGoal(g.id)}
               />
             </NavLink>
           )
@@ -509,9 +532,29 @@ function Dashboard() {
     } catch {}
   }, [])
 
+  useEffect(() => {
+    const refresh = () => {
+      try {
+        const storedGroups = JSON.parse(localStorage.getItem('tripjar.groups') || '[]')
+        setLocalGroups(Array.isArray(storedGroups) ? storedGroups : [])
+      } catch {}
+      try {
+        const storedGoals = JSON.parse(localStorage.getItem('tripjar.userGoals') || '[]')
+        setUserGoals(Array.isArray(storedGoals) ? storedGoals : [])
+      } catch {}
+    }
+    window.addEventListener('tripjar:dataUpdated', refresh)
+    window.addEventListener('storage', refresh)
+    return () => {
+      window.removeEventListener('tripjar:dataUpdated', refresh)
+      window.removeEventListener('storage', refresh)
+    }
+  }, [])
+
   const goals = useMemo(() => {
     const groupGoals = localGroups.map(g => ({ title: g.name, current: g.current || 0, total: g.target || 0 }))
     const userGoalCards = userGoals.map(g => ({
+      id: g.id,
       title: g.title,
       current: g.current || 0,
       total: g.total || 0,

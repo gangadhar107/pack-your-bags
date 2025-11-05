@@ -53,6 +53,25 @@ export default function PlanTrip() {
     setJoined((j) => Math.min(totalMembers, j + 1))
   }
 
+  const createGroup = () => {
+    if (!tripName?.trim() || !date) return
+    const stored = JSON.parse(localStorage.getItem('tripjar.groups') || '[]')
+    const id = 'grp_' + Math.random().toString(36).slice(2, 9)
+    const newGroup = {
+      id,
+      name: tripName.trim(),
+      current: 0,
+      target: parseInt(budget || '0', 10) || 0,
+      membersCount: parseInt(members || '0', 10) || 0,
+      minWeekly: parseInt(minWeekly || '0', 10) || 0,
+      date,
+    }
+    localStorage.setItem('tripjar.groups', JSON.stringify([newGroup, ...stored]))
+    // Notify app-wide listeners that data changed
+    window.dispatchEvent(new Event('tripjar:dataUpdated'))
+    navigate('/groups')
+  }
+
   return (
     <div className="min-h-screen pb-24">
       <header className="flex items-center gap-3 px-5 pt-6 slide-up">
@@ -130,21 +149,3 @@ export default function PlanTrip() {
     </div>
   )
 }
-  const createGroup = () => {
-    if (!tripName?.trim() || !date) return
-    const stored = JSON.parse(localStorage.getItem('tripjar.groups') || '[]')
-    const id = 'grp_' + Math.random().toString(36).slice(2, 9)
-    const newGroup = {
-      id,
-      name: tripName.trim(),
-      current: 0,
-      target: parseInt(budget || '0', 10) || 0,
-      membersCount: parseInt(members || '0', 10) || 0,
-      minWeekly: parseInt(minWeekly || '0', 10) || 0,
-      date,
-    }
-    localStorage.setItem('tripjar.groups', JSON.stringify([newGroup, ...stored]))
-    // Notify app-wide listeners that data changed
-    window.dispatchEvent(new Event('tripjar:dataUpdated'))
-    navigate('/groups')
-  }
