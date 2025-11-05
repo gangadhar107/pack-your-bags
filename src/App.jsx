@@ -77,10 +77,9 @@ function Header() {
         <p className="text-slate-600 text-sm">Let’s reach your goal faster today!</p>
       </div>
       <div className="flex items-center gap-3 slide-up">
-        <button aria-label="Notifications" className="card p-2 bounce-soft">
-          <span className="text-xl">🔔</span>
-        </button>
-        <img alt="Profile" src="https://api.dicebear.com/9.x/initials/svg?seed=G" className="w-9 h-9 rounded-full shadow-soft" />
+        <NavLink to="/profile" aria-label="Profile" className="inline-block">
+          <img alt="Profile" src="https://api.dicebear.com/9.x/initials/svg?seed=G" className="w-9 h-9 rounded-full shadow-soft hover:translate-y-[-1px] transition-transform" />
+        </NavLink>
       </div>
     </header>
   )
