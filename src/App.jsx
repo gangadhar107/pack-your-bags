@@ -314,7 +314,7 @@ function ActiveGoals({ goals }) {
                   total={g.total}
                   percent={percent}
                   autopay={g.autopay}
-                  imageSrc="/assets/goa-shack.png"
+                  imageSrc={`${import.meta.env.BASE_URL}assets/goa-shack.png`}
                   emoji="🏖️"
                   interactiveTip
                 />
@@ -329,7 +329,7 @@ function ActiveGoals({ goals }) {
                   current={g.current}
                   total={g.total}
                   percent={percent}
-                  imageSrc="/assets/Ladakh.jpg"
+                  imageSrc={`${import.meta.env.BASE_URL}assets/Ladakh.jpg`}
                   emoji="🏍️"
                 />
               </div>
