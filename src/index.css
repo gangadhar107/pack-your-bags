@@ -11,6 +11,11 @@ body {
   @apply bg-mint-sky text-slate-800;
 }
 
+/* Prevent background scroll when modal overlays are open */
+body.modal-open {
+  overflow: hidden;
+}
+
 /* Custom animations */
 .slide-up {
   animation: slide-up 600ms ease-out both;
@@ -96,4 +101,14 @@ body {
   0% { transform: scale(1); }
   50% { transform: scale(1.03); }
   100% { transform: scale(1); }
+}
+
+/* Fire flicker animation for 🔥 icons */
+@keyframes flicker {
+  0% { opacity: 0.85; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-0.5px); }
+  100% { opacity: 0.9; transform: translateY(0); }
+}
+.animate-flicker {
+  animation: flicker 1.6s ease-in-out infinite;
 }

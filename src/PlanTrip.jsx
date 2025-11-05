@@ -56,7 +56,7 @@ export default function PlanTrip() {
   return (
     <div className="min-h-screen pb-24">
       <header className="flex items-center gap-3 px-5 pt-6 slide-up">
-        <button aria-label="Back" onClick={() => navigate('/')} className="card p-2 bounce-soft">←</button>
+        <button aria-label="Back" onClick={() => navigate('/groups')} className="card p-2 bounce-soft">←</button>
         <h1 className="text-lg font-semibold">Plan a trip together! 🚀</h1>
       </header>
 
@@ -72,7 +72,16 @@ export default function PlanTrip() {
 
               <p className="text-sm text-slate-700">Each needs to save <span className="font-semibold">₹{perPerson.toLocaleString('en-IN')}</span></p>
 
-              <button onClick={() => setStep(2)} className="mt-2 bounce-soft bg-gradient-to-r from-orange to-teal text-white rounded-full px-4 py-3 shadow-soft font-semibold">Next: Invite Friends</button>
+              <button
+                onClick={() => setStep(2)}
+                disabled={!tripName?.trim() || !date}
+                className={`mt-2 bounce-soft bg-gradient-to-r from-orange to-teal text-white rounded-full px-4 py-3 shadow-soft font-semibold ${(!tripName?.trim() || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                Next: Invite Friends
+              </button>
+              {(!tripName?.trim() || !date) && (
+                <p className="text-xs text-red-600 mt-2">Trip name and date are required.</p>
+              )}
             </div>
           </div>
         </section>
@@ -99,10 +108,43 @@ export default function PlanTrip() {
               </div>
             </div>
 
-            <button onClick={() => navigate('/')} className="mt-4 text-teal font-semibold">Skip, I’ll invite later</button>
+            <div className="mt-4 flex items-center gap-4">
+              <button
+                onClick={createGroup}
+                disabled={!tripName?.trim() || !date}
+                className={`bounce-soft bg-gradient-to-r from-teal to-orange text-white rounded-full px-4 py-2 shadow-soft font-semibold ${(!tripName?.trim() || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                Create Group
+              </button>
+              <button
+                onClick={createGroup}
+                disabled={!tripName?.trim() || !date}
+                className={`text-teal font-semibold ${(!tripName?.trim() || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                Create and invite later
+              </button>
+            </div>
           </div>
         </section>
       )}
     </div>
   )
 }
+  const createGroup = () => {
+    if (!tripName?.trim() || !date) return
+    const stored = JSON.parse(localStorage.getItem('tripjar.groups') || '[]')
+    const id = 'grp_' + Math.random().toString(36).slice(2, 9)
+    const newGroup = {
+      id,
+      name: tripName.trim(),
+      current: 0,
+      target: parseInt(budget || '0', 10) || 0,
+      membersCount: parseInt(members || '0', 10) || 0,
+      minWeekly: parseInt(minWeekly || '0', 10) || 0,
+      date,
+    }
+    localStorage.setItem('tripjar.groups', JSON.stringify([newGroup, ...stored]))
+    // Notify app-wide listeners that data changed
+    window.dispatchEvent(new Event('tripjar:dataUpdated'))
+    navigate('/groups')
+  }

@@ -16,7 +16,7 @@ function ProgressBar({ percent = 0, color = '#22c55e' }) {
   )
 }
 
-export default function GoalDetail() {
+export default function GoalDetail({ goals = [] }) {
   const navigate = useNavigate()
   const [current, setCurrent] = useState(3000)
   const [target] = useState(15000)
@@ -32,7 +32,7 @@ export default function GoalDetail() {
       {/* Header */}
       <header className="flex items-center gap-3 px-5 pt-6 slide-up">
         <button aria-label="Back" onClick={() => navigate('/')} className="card p-2 bounce-soft">←</button>
-        <h1 className="text-lg font-semibold">Goa Trip 2024 🎯</h1>
+        <h1 className="text-lg font-semibold">Goa Trip 2026 🎯</h1>
       </header>
 
       {/* Summary Card */}
@@ -84,10 +84,9 @@ export default function GoalDetail() {
       <AddMoneyModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        goals={[{ title: 'Goa Trip 2024' }]}
+        goals={goals}
         onSuccess={(amt) => { handleSuccess(amt); setModalOpen(false) }}
       />
     </div>
   )
 }
-

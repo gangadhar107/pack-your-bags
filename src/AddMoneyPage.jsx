@@ -24,11 +24,10 @@ function ConfettiBurst({ count = 24 }) {
   )
 }
 
-export default function AddMoneyPage() {
+export default function AddMoneyPage({ goals = [] }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(true)
   const [success, setSuccess] = useState(false)
-  const goals = [{ title: 'Goa Trip 2024' }, { title: 'New Phone' }]
 
   return (
     <div className="min-h-screen pb-24">
@@ -41,7 +40,7 @@ export default function AddMoneyPage() {
 
       <AddMoneyModal
         open={open}
-        onClose={() => { setOpen(false) }}
+        onClose={() => { setOpen(false); navigate('/') }}
         goals={goals}
         onSuccess={(amt) => { setSuccess(true); setTimeout(() => setSuccess(false), 1500); setOpen(false) }}
       />
@@ -50,4 +49,3 @@ export default function AddMoneyPage() {
     </div>
   )
 }
-

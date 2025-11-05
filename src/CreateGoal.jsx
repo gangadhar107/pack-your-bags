@@ -1,20 +1,8 @@
 import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-const presets = [
-  { emoji: '🏖️', label: 'Goa Trip', amount: 15000, gradient: 'from-teal to-sky' },
-  { emoji: '🏔️', label: 'Manali', amount: 20000, gradient: 'from-sky to-mint' },
-  { emoji: '📱', label: 'New Phone', amount: 25000, gradient: 'from-teal to-orange' },
-  { emoji: '💻', label: 'Laptop', amount: 50000, gradient: 'from-sky to-teal' },
-  { emoji: '✈️', label: 'International', amount: 100000, gradient: 'from-mint to-sky' },
-  { emoji: '➕', label: 'Custom Goal', amount: '', gradient: 'from-slate-300 to-slate-200' },
-]
-
 export default function CreateGoal() {
   const navigate = useNavigate()
-  const [activeIdx, setActiveIdx] = useState(null)
-  const active = useMemo(() => (activeIdx != null ? presets[activeIdx] : null), [activeIdx])
-
   const [name, setName] = useState('')
   const [target, setTarget] = useState('')
   const [date, setDate] = useState('')
@@ -28,13 +16,6 @@ export default function CreateGoal() {
     return `This will auto-save ${amountText} ${freqText} 💫`
   }, [intervalAmount, frequency])
 
-  const onSelect = (idx) => {
-    setActiveIdx(idx)
-    const p = presets[idx]
-    setName(p.label === 'Custom Goal' ? '' : p.label)
-    setTarget(p.amount || '')
-  }
-
   return (
     <div className="min-h-screen pb-24">
       {/* Header */}
@@ -42,79 +23,77 @@ export default function CreateGoal() {
         <button aria-label="Back" onClick={() => navigate('/')} className="card p-2 bounce-soft">←</button>
         <h1 className="text-lg font-semibold">What are you saving for?</h1>
       </header>
-
-      {/* Preset chips */}
-      <section className="px-5 mt-4">
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          {presets.map((p, idx) => {
-            const activeState = activeIdx === idx
-            return (
-              <button
-                key={idx}
-                onClick={() => onSelect(idx)}
-                className={`min-w-[220px] rounded-xl shadow-soft px-4 py-3 text-left transition-transform ${activeState ? 'scale-[1.03]' : 'scale-100'} bg-gradient-to-br ${p.gradient} text-white`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xl">{p.emoji}</span>
-                  {typeof p.amount === 'number' && (
-                    <span className="font-semibold">₹{p.amount.toLocaleString('en-IN')}</span>
-                  )}
+      {/* Custom goal form only */}
+      <section className="px-5 mt-5">
+        <div className="card p-4 slide-up">
+          <div className="accent-bar bg-gradient-to-r from-teal to-sky" />
+          <div className="grid gap-4 pt-3">
+            <div>
+              <label className="text-sm text-slate-600">Goal name</label>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Goa Trip" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal" />
+            </div>
+            <div>
+              <label className="text-sm text-slate-600">Target amount (₹)</label>
+              <input value={target} onChange={(e) => setTarget(e.target.value.replace(/[^0-9]/g, ''))} placeholder="e.g., 15000" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal" />
+            </div>
+            <div>
+              <label className="text-sm text-slate-600">Target date</label>
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal" />
+            </div>
+            <div className="flex items-center justify-between">
+              <label className="text-sm text-slate-700 font-medium">Enable AutoPay</label>
+              <input type="checkbox" checked={autoPay} onChange={(e) => setAutoPay(e.target.checked)} className="w-5 h-5" />
+            </div>
+            {autoPay && (
+              <div className="grid gap-3">
+                <div>
+                  <label className="text-sm text-slate-600">Frequency</label>
+                  <select value={frequency} onChange={(e) => setFrequency(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal">
+                    {['Daily','Weekly','Monthly','Yearly','Quarterly'].map((f) => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
                 </div>
-                <div className="mt-2 font-semibold">{p.label}</div>
-              </button>
-            )
-          })}
+                <div>
+                  <label className="text-sm text-slate-600">Amount per interval</label>
+                  <input value={intervalAmount} onChange={(e) => setIntervalAmount(e.target.value.replace(/[^0-9]/g, ''))} placeholder="e.g., 500" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal" />
+                </div>
+                <p className="text-sm text-slate-600">{summaryText}</p>
+              </div>
+            )}
+            <button
+              onClick={() => {
+                const title = name.trim()
+                const total = parseInt(target || '0', 10) || 0
+                if (!title || !date || total <= 0) return
+                const stored = JSON.parse(localStorage.getItem('tripjar.userGoals') || '[]')
+                const id = 'goal_' + Math.random().toString(36).slice(2, 9)
+                const newGoal = {
+                  id,
+                  title,
+                  current: 0,
+                  total,
+                  date,
+                  autoPay,
+                  frequency,
+                  intervalAmount: parseInt(intervalAmount || '0', 10) || 0,
+                }
+                localStorage.setItem('tripjar.userGoals', JSON.stringify([newGoal, ...stored]))
+                // Notify app-wide listeners that data changed
+                window.dispatchEvent(new Event('tripjar:dataUpdated'))
+                navigate('/')
+              }}
+              disabled={!name.trim() || !date || !(parseInt(target || '0', 10) > 0)}
+              className={`mt-2 bounce-soft bg-gradient-to-r from-teal to-orange text-white rounded-full px-4 py-3 shadow-soft font-semibold ${(!name.trim() || !date || !(parseInt(target || '0', 10) > 0)) ? 'opacity-60 cursor-not-allowed' : ''}`}
+            >
+              Create Goal 🎯
+            </button>
+            {(!name.trim() || !date || !(parseInt(target || '0', 10) > 0)) && (
+              <p className="text-xs text-red-600">Enter name, date, and a positive target.</p>
+            )}
+          </div>
         </div>
       </section>
-
-      {/* Form card */}
-      {active && (
-        <section className="px-5 mt-5">
-          <div className="card p-4 slide-up">
-            <div className="accent-bar bg-gradient-to-r from-teal to-sky" />
-            <div className="grid gap-4 pt-3">
-              <div>
-                <label className="text-sm text-slate-600">Goal name</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Goa Trip" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal" />
-              </div>
-              <div>
-                <label className="text-sm text-slate-600">Target amount (₹)</label>
-                <input value={target} onChange={(e) => setTarget(e.target.value.replace(/[^0-9]/g, ''))} placeholder="e.g., 15000" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal" />
-              </div>
-              <div>
-                <label className="text-sm text-slate-600">Target date</label>
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal" />
-              </div>
-              <div className="flex items-center justify-between">
-                <label className="text-sm text-slate-700 font-medium">Enable AutoPay</label>
-                <input type="checkbox" checked={autoPay} onChange={(e) => setAutoPay(e.target.checked)} className="w-5 h-5" />
-              </div>
-              {autoPay && (
-                <div className="grid gap-3">
-                  <div>
-                    <label className="text-sm text-slate-600">Frequency</label>
-                    <select value={frequency} onChange={(e) => setFrequency(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal">
-                      {['Daily','Weekly','Monthly','Yearly','Quarterly'].map((f) => (
-                        <option key={f} value={f}>{f}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-sm text-slate-600">Amount per interval</label>
-                    <input value={intervalAmount} onChange={(e) => setIntervalAmount(e.target.value.replace(/[^0-9]/g, ''))} placeholder="e.g., 500" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal" />
-                  </div>
-                  <p className="text-sm text-slate-600">{summaryText}</p>
-                </div>
-              )}
-              <button className="mt-2 bounce-soft bg-gradient-to-r from-teal to-orange text-white rounded-full px-4 py-3 shadow-soft font-semibold">Create Goal 🎯</button>
-            </div>
-          </div>
-        </section>
-      )}
-
-      <footer className="px-5 mt-6 text-center text-slate-700">
-        Every rupee brings you closer to your dream ✨
-      </footer>
     </div>
   )
 }

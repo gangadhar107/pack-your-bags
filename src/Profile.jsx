@@ -9,9 +9,35 @@ function GradientAmount({ value }) {
 
 export default function Profile() {
   const navigate = useNavigate()
-  const [wallet, setWallet] = useState(3240)
+  const [wallet, setWallet] = useState(0)
   const [autopayOn, setAutopayOn] = useState(true)
   const [logoutOpen, setLogoutOpen] = useState(false)
+
+  useEffect(() => {
+    const DEFAULT_GOALS_CURRENT_SUM = 3000 + 20000 // Goa Trip 2026 + Ladakh 2026
+    const readArray = (key) => {
+      try { return JSON.parse(localStorage.getItem(key) || '[]') } catch { return [] }
+    }
+    const sumCurrents = (arr) => arr.reduce((acc, item) => acc + (parseInt(item?.current || 0, 10) || 0), 0)
+
+    const recompute = () => {
+      const groups = readArray('tripjar.groups')
+      const goals = readArray('tripjar.userGoals')
+      const sum = DEFAULT_GOALS_CURRENT_SUM + sumCurrents(groups) + sumCurrents(goals)
+      setWallet(sum)
+    }
+
+    // Initial compute
+    recompute()
+    // Update when app signals data changes or on storage changes (other tabs)
+    const handler = () => recompute()
+    window.addEventListener('tripjar:dataUpdated', handler)
+    window.addEventListener('storage', handler)
+    return () => {
+      window.removeEventListener('tripjar:dataUpdated', handler)
+      window.removeEventListener('storage', handler)
+    }
+  }, [])
 
   return (
     <div className="min-h-screen pb-40">

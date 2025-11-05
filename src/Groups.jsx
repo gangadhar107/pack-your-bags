@@ -31,7 +31,7 @@ function AvatarsRow({ members = [] }) {
   )
 }
 
-function GroupCard({ name, current, target, members, autopaySummary }) {
+function GroupCard({ id, name, current, target, members, autopaySummary, deletable, onDelete }) {
   const percent = useMemo(() => Math.round((current / (target || 1)) * 100), [current, target])
   const navigate = useNavigate()
   return (
@@ -40,7 +40,14 @@ function GroupCard({ name, current, target, members, autopaySummary }) {
       <div className="pt-3 grid gap-3">
         <div className="flex items-center justify-between">
           <div className="font-semibold">{name}</div>
-          <button onClick={() => navigate('/groups/goa-squad')} className="bounce-soft bg-teal-sky text-white rounded-full px-3 py-1.5 shadow-soft text-sm">View Group</button>
+          <div className="flex items-center gap-2">
+            {typeof current === 'number' && deletable && current === 0 && (
+              <button onClick={() => onDelete?.(id)} className="bounce-soft bg-red-500 text-white rounded-full px-3 py-1.5 shadow-soft text-sm">Delete</button>
+            )}
+            {name === 'Goa Squad 🏖️' && (
+              <button onClick={() => navigate('/groups/goa-squad')} className="bounce-soft bg-teal-sky text-white rounded-full px-3 py-1.5 shadow-soft text-sm">View Group</button>
+            )}
+          </div>
         </div>
         <div className="text-sm text-slate-600">₹{current.toLocaleString('en-IN')} / ₹{target.toLocaleString('en-IN')}</div>
         <ProgressBar percent={percent} color="#38bdf8" />
@@ -77,7 +84,15 @@ function SuggestedCard({ title, meta, percent, membersCount }) {
 
 export default function Groups() {
   const [query, setQuery] = useState('')
-  const groups = [
+  const [userGroups, setUserGroups] = useState([])
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('tripjar.groups') || '[]')
+      setUserGroups(Array.isArray(stored) ? stored : [])
+    } catch {}
+  }, [])
+
+  const defaultGroups = [
     {
       name: 'Goa Squad 🏖️',
       current: 12500,
@@ -91,19 +106,49 @@ export default function Groups() {
       autopaySummary: '3/4 have AutoPay ON 🔁',
     },
   ]
-  const filtered = groups.filter(g => g.name.toLowerCase().includes(query.toLowerCase()))
+  const merged = [
+    // Map user-created groups to card data
+    ...userGroups.map(g => ({
+      id: g.id,
+      name: g.name,
+      current: g.current || 0,
+      target: g.target || 0,
+      members: new Array(Math.max(0, g.membersCount || 0)).fill(0).map((_, i) => ({ initials: String.fromCharCode(65 + (i % 26)) })),
+      autopaySummary: g.minWeekly ? `Min weekly ₹${g.minWeekly}` : 'AutoPay OFF',
+      deletable: true,
+    })),
+    ...defaultGroups.map(g => ({ ...g, deletable: false })),
+  ]
+
+  const filtered = merged.filter(g => g.name.toLowerCase().includes(query.toLowerCase()))
+
+  const handleDelete = (id) => {
+    const next = userGroups.filter(g => g.id !== id)
+    setUserGroups(next)
+    localStorage.setItem('tripjar.groups', JSON.stringify(next))
+    // Notify app-wide listeners that data changed
+    window.dispatchEvent(new Event('tripjar:dataUpdated'))
+  }
 
   return (
     <div className="min-h-screen pb-40">
       {/* Header */}
       <header className="px-5 pt-6 slide-up">
-        <h1 className="text-lg font-semibold">Your Trip Groups 👥</h1>
-        <p className="text-slate-600 text-sm">Save together, travel together!</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-semibold">Your Trip Groups 👥</h1>
+            <p className="text-slate-600 text-sm">Save together, travel together!</p>
+          </div>
+          <NavLink to="/plan-trip" className="bounce-soft bg-gradient-to-r from-teal to-orange text-white rounded-full px-3 py-2 shadow-soft inline-flex items-center gap-2">
+            <span className="text-lg">👥➕</span>
+            <span className="font-semibold">Create Group</span>
+          </NavLink>
+        </div>
         <div className="mt-3">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search group or friend…"
+            placeholder="Search group…"
             className="w-full rounded-full border border-slate-200 bg-white px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal"
           />
         </div>
@@ -124,29 +169,25 @@ export default function Groups() {
         ) : (
           <div className="grid gap-4">
             {filtered.map((g, idx) => (
-              <GroupCard key={idx} name={g.name} current={g.current} target={g.target} members={g.members} autopaySummary={g.autopaySummary} />
+              <GroupCard
+                key={g.id || idx}
+                id={g.id}
+                name={g.name}
+                current={g.current}
+                target={g.target}
+                members={g.members}
+                autopaySummary={g.autopaySummary}
+                deletable={g.deletable}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         )}
       </section>
 
-      {/* Suggested Groups */}
-      <section className="px-5 mt-6">
-        <h2 className="text-sm font-semibold text-slate-700 mb-2">Trending Groups 🌍</h2>
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          <SuggestedCard title="Manali Backpackers" meta="78 members saving ₹20L+" membersCount={78} />
-          <SuggestedCard title="College Goa ’25" meta="65% progress" percent={65} membersCount={32} />
-          <SuggestedCard title="Delhi Explorers" meta="45% progress" percent={45} membersCount={15} />
-        </div>
-      </section>
+      {/* Trending groups section removed per request */}
 
-      {/* FAB */}
-      <div className="fixed bottom-20 right-4 z-40">
-        <NavLink to="/plan-trip" className="bounce-soft bg-gradient-to-r from-teal to-orange text-white rounded-full px-4 py-3 shadow-soft inline-flex items-center gap-2">
-          <span className="text-lg">➕</span>
-          <span className="font-semibold">Create New Group</span>
-        </NavLink>
-      </div>
+      {/* Header action moved: removed bottom floating action button */}
 
       {/* Bottom navigation */}
       <BottomNav />
