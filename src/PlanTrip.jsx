@@ -31,6 +31,7 @@ export default function PlanTrip() {
   const [step, setStep] = useState(1)
   // Screen 1 fields
   const [tripName, setTripName] = useState('Goa Squad')
+  const [tripDestination, setTripDestination] = useState('')
   const [budget, setBudget] = useState('60000')
   const [date, setDate] = useState('2024-06-01')
   const [members, setMembers] = useState('4')
@@ -54,12 +55,13 @@ export default function PlanTrip() {
   }
 
   const createGroup = () => {
-    if (!tripName?.trim() || !date) return
+    if (!tripName?.trim() || !tripDestination?.trim() || !date) return
     const stored = JSON.parse(localStorage.getItem('tripjar.groups') || '[]')
     const id = 'grp_' + Math.random().toString(36).slice(2, 9)
     const newGroup = {
       id,
       name: tripName.trim(),
+      destination: tripDestination.trim(),
       current: 0,
       target: parseInt(budget || '0', 10) || 0,
       membersCount: parseInt(members || '0', 10) || 0,
@@ -83,9 +85,10 @@ export default function PlanTrip() {
         <section className="px-5 mt-5">
           <div className="card p-5 slide-up">
             <div className="grid gap-4 pt-3">
-              <FloatingField label="Trip name" value={tripName} onChange={(e) => setTripName(e.target.value)} />
+              <FloatingField label="Group Name" value={tripName} onChange={(e) => setTripName(e.target.value)} />
+              <FloatingField label="Trip Destination" value={tripDestination} onChange={(e) => setTripDestination(e.target.value)} />
               <FloatingField label="Total budget (₹)" value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^0-9]/g, ''))} />
-              <FloatingField label="Date" type="month" value={date.slice(0,7)} onChange={(e) => setDate(e.target.value + '-01')} />
+              <FloatingField label="Month" type="month" value={date.slice(0,7)} onChange={(e) => setDate(e.target.value + '-01')} />
               <FloatingField label="Expected members" value={members} onChange={(e) => setMembers(e.target.value.replace(/[^0-9]/g, ''))} />
               <FloatingField label="Minimum weekly save (₹)" value={minWeekly} onChange={(e) => setMinWeekly(e.target.value.replace(/[^0-9]/g, ''))} />
 
@@ -93,13 +96,13 @@ export default function PlanTrip() {
 
               <button
                 onClick={() => setStep(2)}
-                disabled={!tripName?.trim() || !date}
-                className={`mt-2 bounce-soft bg-gradient-to-r from-orange to-teal text-white rounded-full px-4 py-3 shadow-soft font-semibold ${(!tripName?.trim() || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                disabled={!tripName?.trim() || !tripDestination?.trim() || !date}
+                className={`mt-2 bounce-soft bg-gradient-to-r from-orange to-teal text-white rounded-full px-4 py-3 shadow-soft font-semibold ${(!tripName?.trim() || !tripDestination?.trim() || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 Next: Invite Friends
               </button>
-              {(!tripName?.trim() || !date) && (
-                <p className="text-xs text-red-600 mt-2">Trip name and date are required.</p>
+              {(!tripName?.trim() || !tripDestination?.trim() || !date) && (
+                <p className="text-xs text-red-600 mt-2">Group Name, Trip Destination, and Month are required.</p>
               )}
             </div>
           </div>
@@ -130,15 +133,15 @@ export default function PlanTrip() {
             <div className="mt-4 flex items-center gap-4">
               <button
                 onClick={createGroup}
-                disabled={!tripName?.trim() || !date}
-                className={`bounce-soft bg-gradient-to-r from-teal to-orange text-white rounded-full px-4 py-2 shadow-soft font-semibold ${(!tripName?.trim() || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                disabled={!tripName?.trim() || !tripDestination?.trim() || !date}
+                className={`bounce-soft bg-gradient-to-r from-teal to-orange text-white rounded-full px-4 py-2 shadow-soft font-semibold ${(!tripName?.trim() || !tripDestination?.trim() || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 Create Group
               </button>
               <button
                 onClick={createGroup}
-                disabled={!tripName?.trim() || !date}
-                className={`text-teal font-semibold ${(!tripName?.trim() || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                disabled={!tripName?.trim() || !tripDestination?.trim() || !date}
+                className={`text-teal font-semibold ${(!tripName?.trim() || !tripDestination?.trim() || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 Create and invite later
               </button>

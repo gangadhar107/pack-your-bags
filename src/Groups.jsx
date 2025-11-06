@@ -31,7 +31,7 @@ function AvatarsRow({ members = [] }) {
   )
 }
 
-function GroupCard({ id, name, current, target, members, autopaySummary, deletable, onDelete }) {
+function GroupCard({ id, name, destination, current, target, members, autopaySummary, deletable, onDelete }) {
   const percent = useMemo(() => Math.round((current / (target || 1)) * 100), [current, target])
   const navigate = useNavigate()
   return (
@@ -39,7 +39,10 @@ function GroupCard({ id, name, current, target, members, autopaySummary, deletab
       <div className="accent-bar bg-gradient-to-r from-teal to-sky" />
       <div className="pt-3 grid gap-3">
         <div className="flex items-center justify-between">
-          <div className="font-semibold">{name}</div>
+          <div>
+            <div className="font-semibold">{name}</div>
+            {destination && <div className="text-xs text-slate-500">Destination: {destination}</div>}
+          </div>
           <div className="flex items-center gap-2">
             {typeof current === 'number' && deletable && current === 0 && (
               <button onClick={() => onDelete?.(id)} className="bounce-soft bg-red-500 text-white rounded-full px-3 py-1.5 shadow-soft text-sm">Delete</button>
@@ -95,6 +98,7 @@ export default function Groups() {
   const defaultGroups = [
     {
       name: 'Goa Squad 🏖️',
+      destination: 'Goa',
       current: 12500,
       target: 60000,
       members: [
@@ -111,6 +115,7 @@ export default function Groups() {
     ...userGroups.map(g => ({
       id: g.id,
       name: g.name,
+      destination: g.destination,
       current: g.current || 0,
       target: g.target || 0,
       members: new Array(Math.max(0, g.membersCount || 0)).fill(0).map((_, i) => ({ initials: String.fromCharCode(65 + (i % 26)) })),
