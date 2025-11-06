@@ -112,3 +112,8 @@ body.modal-open {
 .animate-flicker {
   animation: flicker 1.6s ease-in-out infinite;
 }
+/* Hide native month text only when empty; show once filled */
+input.tj-month-empty::-webkit-datetime-edit { color: transparent; }
+input.tj-month-empty:focus::-webkit-datetime-edit { color: inherit; }
+/* Optional: keep calendar icon visible */
+input.tj-month::-webkit-calendar-picker-indicator { opacity: 1; }

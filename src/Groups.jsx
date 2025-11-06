@@ -119,7 +119,7 @@ export default function Groups() {
       current: g.current || 0,
       target: g.target || 0,
       members: new Array(Math.max(0, g.membersCount || 0)).fill(0).map((_, i) => ({ initials: String.fromCharCode(65 + (i % 26)) })),
-      autopaySummary: g.minWeekly ? `Min weekly ₹${g.minWeekly}` : 'AutoPay OFF',
+          autopaySummary: g.minMonthly ? `Min monthly ₹${g.minMonthly}` : 'AutoPay OFF',
       deletable: true,
     })),
     ...defaultGroups.map(g => ({ ...g, deletable: false })),
@@ -178,6 +178,7 @@ export default function Groups() {
                 key={g.id || idx}
                 id={g.id}
                 name={g.name}
+                destination={g.destination}
                 current={g.current}
                 target={g.target}
                 members={g.members}

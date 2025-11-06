@@ -7,7 +7,7 @@ function FloatingField({ label, type = 'text', value, onChange }) {
     <div className="relative">
       <input
         type={type}
-        className="peer w-full rounded-xl border border-slate-200 px-3 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-teal"
+        className={`peer w-full rounded-xl border border-slate-200 px-3 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-teal${type === 'month' ? ` tj-month ${!isFilled ? 'tj-month-empty' : ''}` : ''}`}
         value={value}
         onChange={onChange}
       />
@@ -30,28 +30,64 @@ export default function PlanTrip() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
   // Screen 1 fields
-  const [tripName, setTripName] = useState('Goa Squad')
+  const [tripName, setTripName] = useState('')
   const [tripDestination, setTripDestination] = useState('')
-  const [budget, setBudget] = useState('60000')
-  const [date, setDate] = useState('2024-06-01')
-  const [members, setMembers] = useState('4')
-  const [minWeekly, setMinWeekly] = useState('500')
+  const [budget, setBudget] = useState('')
+  const [date, setDate] = useState('')
+  const [members, setMembers] = useState('')
 
   const perPerson = useMemo(() => {
     const b = parseInt(budget || '0', 10)
-    const m = parseInt(members || '1', 10)
+    const m = parseInt(members || '2', 10) // default to 2 if empty
     return m > 0 ? Math.round(b / m) : 0
   }, [budget, members])
 
+  const minMonthly = useMemo(() => {
+    const total = parseInt(budget || '0', 10)
+    const m = parseInt(members || '2', 10)
+    if (!date) return 0
+    const dest = new Date(date)
+    const destYear = dest.getFullYear()
+    const destMonth = dest.getMonth() + 1 // 1-12
+    const now = new Date()
+    const curYear = now.getFullYear()
+    const curMonth = now.getMonth() + 1 // 1-12
+    const monthsRemaining = (destMonth + 12 * destYear) - (curMonth + 12 * curYear)
+    if (monthsRemaining <= 0) return total // if target is current/past month, need full amount
+    const denom = Math.max(1, m) * monthsRemaining
+    return Math.ceil(total / denom)
+  }, [budget, date, members])
+
   // Screen 2 state
-  const [groupCode] = useState('GOAS24')
   const [joined, setJoined] = useState(0)
-  const totalMembers = parseInt(members || '4', 10)
+  const totalMembers = parseInt(members || '2', 10)
   const joinPercent = Math.min(100, Math.round((joined / Math.max(1, totalMembers)) * 100))
 
-  const handleShareClick = () => {
-    // Simulate a friend joining for demo purposes
+  const inviteUrl = 'https://tripjar.app/invite/broken-link'
+  const [copiedInvite, setCopiedInvite] = useState(false)
+  const shareWhatsAppInvite = () => {
     setJoined((j) => Math.min(totalMembers, j + 1))
+    const url = 'https://wa.me/?text=' + encodeURIComponent(inviteUrl)
+    window.open(url, '_blank')
+  }
+  const shareInstagramInvite = () => {
+    setJoined((j) => Math.min(totalMembers, j + 1))
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(inviteUrl).finally(() => {
+        window.open('https://www.instagram.com/', '_blank')
+      })
+    } else {
+      window.open('https://www.instagram.com/', '_blank')
+    }
+  }
+
+  const copyInviteLink = () => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(inviteUrl).then(() => {
+        setCopiedInvite(true)
+        setTimeout(() => setCopiedInvite(false), 1500)
+      })
+    }
   }
 
   const createGroup = () => {
@@ -64,8 +100,8 @@ export default function PlanTrip() {
       destination: tripDestination.trim(),
       current: 0,
       target: parseInt(budget || '0', 10) || 0,
-      membersCount: parseInt(members || '0', 10) || 0,
-      minWeekly: parseInt(minWeekly || '0', 10) || 0,
+      membersCount: parseInt(members || '2', 10) || 2,
+      minMonthly: parseInt(minMonthly || '0', 10) || 0,
       date,
     }
     localStorage.setItem('tripjar.groups', JSON.stringify([newGroup, ...stored]))
@@ -88,9 +124,9 @@ export default function PlanTrip() {
               <FloatingField label="Group Name" value={tripName} onChange={(e) => setTripName(e.target.value)} />
               <FloatingField label="Trip Destination" value={tripDestination} onChange={(e) => setTripDestination(e.target.value)} />
               <FloatingField label="Total budget (₹)" value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^0-9]/g, ''))} />
-              <FloatingField label="Month" type="month" value={date.slice(0,7)} onChange={(e) => setDate(e.target.value + '-01')} />
+              <FloatingField label="Month" type="month" value={date ? date.slice(0,7) : ''} onChange={(e) => setDate(e.target.value + '-01')} />
               <FloatingField label="Expected members" value={members} onChange={(e) => setMembers(e.target.value.replace(/[^0-9]/g, ''))} />
-              <FloatingField label="Minimum weekly save (₹)" value={minWeekly} onChange={(e) => setMinWeekly(e.target.value.replace(/[^0-9]/g, ''))} />
+              <FloatingField label="Minimum monthly save (₹)" value={String(minMonthly)} onChange={() => {}} />
 
               <p className="text-sm text-slate-700">Each needs to save <span className="font-semibold">₹{perPerson.toLocaleString('en-IN')}</span></p>
 
@@ -112,16 +148,26 @@ export default function PlanTrip() {
       {step === 2 && (
         <section className="px-5 mt-5">
           <div className="card p-5 slide-up">
-
-            <div className="mt-3">
-              <div className="rounded-xl p-4 bg-gradient-to-r from-teal to-sky text-white shadow-soft inline-block">Group Code: <span className="font-bold">{groupCode}</span></div>
+            <div className="mt-1 flex items-center justify-between">
+              <div className="text-sm text-slate-600">Invite friends</div>
+              <div className="flex items-center gap-2">
+                <button onClick={shareWhatsAppInvite} aria-label="Share on WhatsApp" title="Share on WhatsApp" className="bounce-soft rounded-full h-10 w-10 flex items-center justify-center shadow-soft" style={{ backgroundColor: '#25D366' }}>
+                  <img alt="WhatsApp" src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/whatsapp.svg" className="w-5 h-5 filter invert" />
+                </button>
+                <button onClick={shareInstagramInvite} aria-label="Share on Instagram" title="Share on Instagram" className="bounce-soft rounded-full h-10 w-10 flex items-center justify-center shadow-soft bg-gradient-to-br from-pink-500 via-orange-400 to-purple-500">
+                  <img alt="Instagram" src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/instagram.svg" className="w-5 h-5 filter invert" />
+                </button>
+              </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button onClick={handleShareClick} className="bounce-soft bg-green-500 text-white rounded-full px-4 py-2 shadow-soft">WhatsApp</button>
-              <button onClick={handleShareClick} className="bounce-soft bg-slate-800 text-white rounded-full px-4 py-2 shadow-soft">Copy Link</button>
-              <button onClick={handleShareClick} className="bounce-soft bg-pink-500 text-white rounded-full px-4 py-2 shadow-soft">Instagram Story</button>
-            </div>
+            <button onClick={copyInviteLink} className="mt-3 w-full text-left">
+              <div className="rounded-xl border-2 border-dashed border-slate-300 p-4 bg-white overflow-hidden">
+                <div className="text-sm text-slate-600">Invite link</div>
+                <div className="text-sm font-mono break-all">{inviteUrl}</div>
+                <div className="mt-1 text-xs text-slate-500">Tap to copy invite link</div>
+              </div>
+            </button>
+            {copiedInvite && <div className="mt-2 text-xs text-teal">Copied!</div>}
 
             <div className="mt-4">
               <div className="text-sm text-slate-700 mb-1">{joined} / {totalMembers} joined</div>

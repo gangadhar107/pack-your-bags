@@ -108,7 +108,25 @@ export default function GoaGroup({ goals = [] }) {
   const [combinedCurrent, setCombinedCurrent] = useState(12500)
   const combinedTarget = 60000
   const percent = useMemo(() => Math.round((combinedCurrent / combinedTarget) * 100), [combinedCurrent, combinedTarget])
-  const deg = `${percent * 3.6}deg`
+  // Contribution segments for multi-color donut
+  const contributions = [
+    { name: 'Gangadhar', amount: 3500, color: '#facc15' },
+    { name: 'Arjun', amount: 3200, color: '#38bdf8' },
+    { name: 'Priya', amount: 3100, color: '#14b8a6' },
+    { name: 'Rahul', amount: 2700, color: '#a78bfa' },
+  ]
+  const donutBackground = useMemo(() => {
+    let acc = 0
+    const segments = contributions.map(c => {
+      const seg = (c.amount / combinedTarget) * 360
+      const start = acc
+      const end = acc + seg
+      acc = end
+      return `${c.color} ${start}deg ${end}deg`
+    })
+    segments.push(`#e5e7eb ${acc}deg 360deg`)
+    return `conic-gradient(${segments.join(', ')})`
+  }, [combinedTarget])
   const animatedCurrent = useCountUp(combinedCurrent, 900)
   const [modalOpen, setModalOpen] = useState(false)
   const [burstCount, setBurstCount] = useState(0)
@@ -126,14 +144,21 @@ export default function GoaGroup({ goals = [] }) {
         <div className="card p-5 slide-up">
           <div className="accent-bar bg-gradient-to-r from-teal to-sky" />
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 pt-3">
+            {/* Left: Combined amount */}
             <div>
               <div className="text-sm text-slate-600">Combined</div>
               <div className="text-2xl font-bold">₹{animatedCurrent.toLocaleString('en-IN')} / ₹{combinedTarget.toLocaleString('en-IN')}</div>
               <div className="mt-1 text-xs text-slate-600">Days left: <span className="font-semibold">45</span></div>
               <div className="mt-1 text-xs text-teal">Next ₹500 auto-saves in 2 days</div>
             </div>
-            <div className="justify-self-center">
-              <div className="ring" style={{ ['--ring-color']: '#22c55e', ['--ring-deg']: deg }}>
+            {/* Middle: Destination */}
+            <div className="justify-self-center text-center">
+              <div className="text-xs text-slate-500">Destination</div>
+              <div className="text-sm font-semibold">Goa</div>
+            </div>
+            {/* Right: Multi-color donut chart */}
+            <div className="justify-self-end">
+              <div className="ring" style={{ background: donutBackground }}>
                 <div className="ring-inner">
                   <div className="text-center">
                     <div className="text-[10px] text-slate-500">Progress</div>
@@ -141,12 +166,6 @@ export default function GoaGroup({ goals = [] }) {
                   </div>
                 </div>
               </div>
-            </div>
-            <div className="justify-self-end">
-              <NavLink to="/plan-trip" className="bounce-soft bg-teal-sky text-white rounded-full px-4 py-2 shadow-soft inline-flex items-center gap-2">
-                <span>✈️</span>
-                <span className="font-semibold">Plan Trip</span>
-              </NavLink>
             </div>
           </div>
         </div>
