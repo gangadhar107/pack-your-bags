@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-function FloatingField({ label, type = 'text', value, onChange }) {
+function FloatingField({ label, type = 'text', value, onChange, onFocus, onBlur, onKeyDown }) {
   const isFilled = value !== undefined && value !== null && String(value).length > 0
   return (
     <div className="relative">
@@ -10,6 +10,9 @@ function FloatingField({ label, type = 'text', value, onChange }) {
         className={`peer w-full rounded-xl border border-slate-200 px-3 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-teal${type === 'month' ? ` tj-month ${!isFilled ? 'tj-month-empty' : ''}` : ''}`}
         value={value}
         onChange={onChange}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        onKeyDown={onKeyDown}
       />
       <label
         className={
@@ -32,6 +35,119 @@ export default function PlanTrip() {
   // Screen 1 fields
   const [tripName, setTripName] = useState('')
   const [tripDestination, setTripDestination] = useState('')
+  const [destPredictions, setDestPredictions] = useState([])
+  const [destPlaceId, setDestPlaceId] = useState('')
+  const [showDestSuggestions, setShowDestSuggestions] = useState(false)
+  const [destError, setDestError] = useState('')
+  const [placesReady, setPlacesReady] = useState(false)
+  const [sessionToken, setSessionToken] = useState(null)
+
+  // Local mock dataset for destinations (used for autocomplete now)
+  const mockDestinations = [
+    'Agra', 'Ahmedabad', 'Aizawl', 'Ajmer', 'Alleppey', 'Almora', 'Ambala', 'Amritsar', 'Anand', 'Andaman', 'Aurangabad',
+    'Badami', 'Bagdogra', 'Bangalore', 'Balurghat', 'Bandhavgarh', 'Bareilly', 'Bastar', 'Bathinda', 'Beed', 'Belgaum',
+    'Bellary', 'Bengaluru', 'Berhampore', 'Betul', 'Bhadrachalam', 'Bhandardara', 'Bharatpur', 'Bharuch', 'Bhatinda',
+    'Bhavnagar', 'Bhilai', 'Bhilwara', 'Bhimtal', 'Bhopal', 'Bhubaneswar', 'Bhuj', 'Bidar', 'Bilaspur', 'Bodhgaya',
+    'Bokaro', 'Bomdila', 'Bundi', 'Calangute', 'Calicut', 'Chail', 'Chamba', 'Chamoli', 'Chandigarh', 'Chandrapur',
+    'Chennai', 'Cherrapunji', 'Chikmagalur', 'Chiplun', 'Chitradurga', 'Coimbatore', 'Coonoor', 'Coorg', 'Cuttack',
+    'Dalhousie', 'Daman', 'Darbhanga', 'Darjeeling', 'Dausa', 'Dehradun', 'Delhi', 'Dhanaulti', 'Dhanbad', 'Dharamkot',
+    'Dharamshala', 'Dharwad', 'Dholavira', 'Digha', 'Dimapur', 'Dindigul', 'Dispur', 'Diu', 'Doda', 'Dooars', 'Durgapur',
+    'Dwarka', 'Ernakulam', 'Erode', 'Fatehpur Sikri', 'Gangotri', 'Gangtok', 'Ganjam', 'Gaya', 'Gokarna', 'Golconda',
+    'Gorakhpur', 'Gulbarga', 'Guna', 'Guntur', 'Gurgaon', 'Guwahati', 'Gwalior', 'Hampi', 'Hanumangarh', 'Hassan',
+    'Haridwar', 'Hazaribagh', 'Himachal Pradesh', 'Hosur', 'Hubli', 'Hyderabad', 'Imphal', 'Indore', 'Itanagar',
+    'Jabalpur', 'Jaipur', 'Jaisalmer', 'Jalandhar', 'Jammu', 'Jamshedpur', 'Jodhpur', 'Junagadh', 'Kailash Mansarovar',
+    'Kakinada', 'Kalimpong', 'Kanchipuram', 'Kanha National Park', 'Kanpur', 'Kanyakumari', 'Kargil', 'Karjat', 'Karur',
+    'Kasol', 'Kasauli', 'Kathmandu', 'Kaziranga', 'Kedarnath', 'Keoladeo National Park', 'Khajuraho', 'Khandala',
+    'Khimsar', 'Kodaikanal', 'Kohima', 'Kollam', 'Konark', 'Kongthong', 'Kota', 'Kottayam', 'Kovalam', 'Kozhikode',
+    'Kullu', 'Kumaon', 'Kurukshetra', 'Kurseong', 'Lakshadweep', 'Lansdowne', 'Leh', 'Lepchajagat', 'Lonavala',
+    'Lucknow', 'Ludhiana', 'Madgaon', 'Madurai', 'Mahabalipuram', 'Mahabaleshwar', 'Malappuram', 'Malpe', 'Malshej Ghat',
+    'Manali', 'Mangalore', 'Manipal', 'Matheran', 'Mathura', 'Meghalaya', 'Mirzapur', 'Mokokchung', 'Moradabad',
+    'Mount Abu', 'Mumbai', 'Munnar', 'Murudeshwar', 'Mussoorie', 'Mysore', 'Nagaland', 'Nagapattinam', 'Nagpur',
+    'Nainital', 'Nalbari', 'Namchi', 'Nanded', 'Nashik', 'Navi Mumbai', 'Nellore', 'Noida', 'Ooty', 'Orchha', 'Palakkad',
+    'Panchgani', 'Panipat', 'Panjim', 'Parwanoo', 'Patiala', 'Patna', 'Pelling', 'Phalodi', 'Phuket', 'Pondicherry',
+    'Porbandar', 'Port Blair', 'Prayagraj', 'Pune', 'Puri', 'Pushkar', 'Raichur', 'Raigad', 'Raipur', 'Rajahmundry',
+    'Rajgir', 'Rajkot', 'Rameswaram', 'Ranchi', 'Ranikhet', 'Ranthambore', 'Ras Al Khaimah', 'Ratnagiri', 'Rewa',
+    'Rishikesh', 'Ropar', 'Rourkela', 'Sabarimala', 'Sagar Island', 'Salem', 'Sambalpur', 'Sanchi', 'Sangli', 'Saputara',
+    'Sasaram', 'Satara', 'Shillong', 'Shimla', 'Shirdi', 'Silchar', 'Siliguri', 'Silvassa', 'Sindhudurg', 'Sirsi',
+    'Sivasagar', 'Solan', 'Solapur', 'Somnath', 'Sonamarg', 'Srinagar', 'Surat', 'Tajpur', 'Tambaram', 'Tezpur',
+    'Thanjavur', 'Thiruvananthapuram', 'Thrissur', 'Tinsukia', 'Tiruchirapalli', 'Tirunelveli', 'Tirupati', 'Tiruvannamalai',
+    'Tura', 'Tuticorin', 'Udaipur', 'Udhampur', 'Udupi', 'Ujjain', 'Una', 'Vadodara', 'Valsad', 'Varanasi', 'Varkala',
+    'Vellore', 'Veraval', 'Vidisha', 'Vijayawada', 'Visakhapatnam', 'Vrindavan', 'Wayanad', 'Warangal', 'Wardha',
+    'Yelagiri', 'Yercaud', 'Ziro Valley',  'Auli', 'Bir Billing', 'Spiti Valley', 'Chopta', 'Tawang', 'Zanskar Valley', 'Sandakphu', 'Kufri', 'Araku Valley',
+    'Valley of Flowers', 'Gulmarg', 'Bhandardara', 'Devikulam', 'Dandeli', 'Chilika Lake', 'Bhutan Border Trek',
+    'Sundarbans', 'Gir National Park', 'Corbett National Park', 'Pench National Park', 'Tadoba', 'Sattal', 'Bhimtal',
+    'Tehri', 'Har Ki Dun', 'Triund', 'Kheerganga', 'Roopkund', 'Hampta Pass', 'Chandrashila', 'Kuari Pass', 'Nubra Valley',
+    'Markha Valley', 'Spangmik', 'Pangong', 'Tso Moriri', 'Khimsar Dunes', 'Barmer', 'Jawai Leopard Reserve',
+    'Bharatpur Bird Sanctuary', 'Kutch', 'Mandvi Beach', 'Murud Beach', 'Alibaug', 'Ganpatipule', 'Varkala Beach',
+    'Bekal', 'Marari', 'Kumarakom', 'Poovar', 'Wayanad', 'Agumbe', 'Kabini', 'BR Hills', 'Sakleshpur', 'Sringeri',
+    'Chikmagalur', 'Coorg', 'Nagarhole', 'Hampi', 'Badami', 'Bidar Fort', 'Bijapur', 'Pattadakal', 'Belur', 'Halebidu',
+    'Gokarna', 'Karwar', 'Murdeshwar', 'Rameswaram', 'Dhanushkodi', 'Kanchipuram', 'Chettinad', 'Thanjavur',
+    'Madurai', 'Ramanathapuram', 'Yercaud', 'Kolli Hills', 'Valparai', 'Pollachi', 'Idukki', 'Munnar', 'Vagamon',
+    'Thenmala', 'Trivandrum', 'Kovalam', 'Alleppey', 'Varkala', 'Thrissur', 'Palakkad', 'Kozhikode', 'Wayanad',
+    'Kannur', 'Kasargod', 'Lakshadweep', 'Port Blair', 'Havelock Island', 'Neil Island', 'Baratang', 'Chidiya Tapu',
+    'Long Island', 'Rangat', 'Diglipur', 'Mayabunder', 'Nicobar', 'Great Nicobar Island', 'Goa'
+  ]
+
+  const slugify = (s) => String(s).trim().toLowerCase().replace(/\s+/g, '-')
+
+  // Remove redundant places (exact string duplicates, keep insertion order)
+  const mockDestinationsUnique = useMemo(
+    () => Array.from(new Set(mockDestinations.map((s) => String(s).trim()).filter(Boolean))),
+    []
+  )
+
+  const ensurePlacesLoaded = async () => {
+    if (window.google && window.google.maps && window.google.maps.places) { setPlacesReady(true); return }
+    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    if (!key) { setPlacesReady(false); return }
+    await new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-google="places"]')
+      if (existing) { existing.addEventListener('load', resolve); existing.addEventListener('error', reject); return }
+      const s = document.createElement('script')
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&language=en&region=IN`
+      s.async = true
+      s.defer = true
+      s.dataset.google = 'places'
+      s.onload = resolve
+      s.onerror = reject
+      document.head.appendChild(s)
+    }).catch(() => {})
+    setPlacesReady(!!(window.google && window.google.maps && window.google.maps.places))
+  }
+
+  const queryDestinations = async (q) => {
+    const term = String(q || '').trim().toLowerCase()
+    if (!term) { setDestPredictions([]); setShowDestSuggestions(false); setDestError(''); return }
+    const matches = mockDestinationsUnique
+      .filter((d) => d.toLowerCase().includes(term))
+      .slice(0, 8)
+      .map((d) => ({ description: d, place_id: 'mock:' + slugify(d) }))
+    if (matches.length) {
+      setDestPredictions(matches)
+      setDestError('')
+    } else {
+      setDestPredictions([])
+      setDestError('No matching destination found.')
+    }
+    setShowDestSuggestions(true)
+  }
+
+  const onDestInputChange = (e) => {
+    const val = e.target.value
+    setTripDestination(val)
+    setDestPlaceId('')
+    queryDestinations(val)
+  }
+
+  const onSelectPrediction = (p) => {
+    setTripDestination(p.description || '')
+    setDestPlaceId(p.place_id || '')
+    setDestPredictions([])
+    setShowDestSuggestions(false)
+    setDestError('')
+    // End the session when a prediction is selected
+    setSessionToken(null)
+  }
   const [budget, setBudget] = useState('')
   const [date, setDate] = useState('')
   const [members, setMembers] = useState('')
@@ -91,13 +207,14 @@ export default function PlanTrip() {
   }
 
   const createGroup = () => {
-    if (!tripName?.trim() || !tripDestination?.trim() || !date) return
+    if (!tripName?.trim() || !destPlaceId || !date) return
     const stored = JSON.parse(localStorage.getItem('tripjar.groups') || '[]')
     const id = 'grp_' + Math.random().toString(36).slice(2, 9)
     const newGroup = {
       id,
       name: tripName.trim(),
       destination: tripDestination.trim(),
+      placeId: destPlaceId,
       current: 0,
       target: parseInt(budget || '0', 10) || 0,
       membersCount: parseInt(members || '2', 10) || 2,
@@ -122,7 +239,27 @@ export default function PlanTrip() {
           <div className="card p-5 slide-up">
             <div className="grid gap-4 pt-3">
               <FloatingField label="Group Name" value={tripName} onChange={(e) => setTripName(e.target.value)} />
-              <FloatingField label="Trip Destination" value={tripDestination} onChange={(e) => setTripDestination(e.target.value)} />
+              <div className="relative">
+                <FloatingField
+                  label="Trip Destination"
+                  value={tripDestination}
+                  onChange={onDestInputChange}
+                  onFocus={() => setShowDestSuggestions(destPredictions.length > 0)}
+                />
+                {showDestSuggestions && (
+                  <div className="absolute left-0 right-0 mt-1 rounded-xl border border-slate-200 bg-white shadow-soft max-h-52 overflow-auto z-20">
+                    {destPredictions.length > 0 ? (
+                      destPredictions.map((p) => (
+                        <button key={p.place_id} onClick={() => onSelectPrediction(p)} className="w-full text-left px-3 py-2 hover:bg-slate-50">
+                          <div className="text-sm">{p.description}</div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-slate-500">{destError || 'No matching destination found.'}</div>
+                    )}
+                  </div>
+                )}
+              </div>
               <FloatingField label="Total budget (₹)" value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^0-9]/g, ''))} />
               <FloatingField label="Month" type="month" value={date ? date.slice(0,7) : ''} onChange={(e) => setDate(e.target.value + '-01')} />
               <FloatingField label="Expected members" value={members} onChange={(e) => setMembers(e.target.value.replace(/[^0-9]/g, ''))} />
@@ -132,13 +269,13 @@ export default function PlanTrip() {
 
               <button
                 onClick={() => setStep(2)}
-                disabled={!tripName?.trim() || !tripDestination?.trim() || !date}
-                className={`mt-2 bounce-soft bg-gradient-to-r from-orange to-teal text-white rounded-full px-4 py-3 shadow-soft font-semibold ${(!tripName?.trim() || !tripDestination?.trim() || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                disabled={!tripName?.trim() || !destPlaceId || !date}
+                className={`mt-2 bounce-soft bg-gradient-to-r from-orange to-teal text-white rounded-full px-4 py-3 shadow-soft font-semibold ${(!tripName?.trim() || !destPlaceId || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 Next: Invite Friends
               </button>
-              {(!tripName?.trim() || !tripDestination?.trim() || !date) && (
-                <p className="text-xs text-red-600 mt-2">Group Name, Trip Destination, and Month are required.</p>
+              {(!tripName?.trim() || !destPlaceId || !date) && (
+                <p className="text-xs text-red-600 mt-2">Group Name, a valid Trip Destination (from suggestions), and Month are required.</p>
               )}
             </div>
           </div>
@@ -179,15 +316,15 @@ export default function PlanTrip() {
             <div className="mt-4 flex items-center gap-4">
               <button
                 onClick={createGroup}
-                disabled={!tripName?.trim() || !tripDestination?.trim() || !date}
-                className={`bounce-soft bg-gradient-to-r from-teal to-orange text-white rounded-full px-4 py-2 shadow-soft font-semibold ${(!tripName?.trim() || !tripDestination?.trim() || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                disabled={!tripName?.trim() || !destPlaceId || !date}
+                className={`bounce-soft bg-gradient-to-r from-teal to-orange text-white rounded-full px-4 py-2 shadow-soft font-semibold ${(!tripName?.trim() || !destPlaceId || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 Create Group
               </button>
               <button
                 onClick={createGroup}
-                disabled={!tripName?.trim() || !tripDestination?.trim() || !date}
-                className={`text-teal font-semibold ${(!tripName?.trim() || !tripDestination?.trim() || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                disabled={!tripName?.trim() || !destPlaceId || !date}
+                className={`text-teal font-semibold ${(!tripName?.trim() || !destPlaceId || !date) ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 Create and invite later
               </button>
