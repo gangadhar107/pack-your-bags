@@ -12,10 +12,13 @@ import AutoPaySettings from './AutoPaySettings'
 import SupportHelp from './SupportHelp'
 import GoalDetail from './GoalDetail'
 import AddMoneyPage from './AddMoneyPage'
+import WithdrawModal from './WithdrawModal'
+import NewSoloTrip from './NewSoloTrip'
 
 // Shared goals data used by both the summary and goals list
 const goalsData = [
-  { title: 'Goa Trip 2026', current: 3000, total: 15000, autopay: { amount: 500 } },
+  // Demo solo for Goa should not appear in Add Money (group exists)
+  { title: 'Goa Trip 2026', current: 3000, total: 15000, autopay: { amount: 500 }, hiddenInAddMoney: true },
   { title: 'Ladakh 2026', current: 20000, total: 25000 },
 ]
 
@@ -90,9 +93,9 @@ function CompletionDonut({ goals = [], saved = 0, target = 1, size = 96, thickne
               <div key={i} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: palette[i % palette.length] }} />
-                  <span className="text-slate-700">{g.title}</span>
+                  <span className="text-slate-700">{g.type === 'group' ? `${g.title} (Group)` : g.title}</span>
                 </div>
-                <span className="text-slate-600">₹{(g.current || 0).toLocaleString('en-IN')}</span>
+                <span className="text-slate-600">₹{(g.current || 0).toLocaleString('en-IN')} / ₹{(g.total || 0).toLocaleString('en-IN')}</span>
               </div>
             ))}
           </div>
@@ -122,6 +125,22 @@ function ProgressBar({ percent = 0, color = '#22c55e' }) {
 
 function Header({ onOpenStreak, streakCount = 0 }) {
   const navigate = useNavigate()
+  const [referralEarn, setReferralEarn] = useState(0)
+  useEffect(() => {
+    const refresh = () => {
+      try {
+        const val = parseInt(localStorage.getItem('tripjar.referralEarnings') || '0', 10) || 0
+        setReferralEarn(val)
+      } catch {}
+    }
+    refresh()
+    window.addEventListener('tripjar:dataUpdated', refresh)
+    window.addEventListener('storage', refresh)
+    return () => {
+      window.removeEventListener('tripjar:dataUpdated', refresh)
+      window.removeEventListener('storage', refresh)
+    }
+  }, [])
   return (
     <header className="px-5 pt-6">
       <div className="rounded-2xl p-4 bg-gradient-to-r from-mint via-teal to-sky shadow-soft">
@@ -129,7 +148,7 @@ function Header({ onOpenStreak, streakCount = 0 }) {
           {/* Left: Title and subtitle */}
           <div className="slide-up">
             <h1 className="text-xl font-semibold text-slate-900">Hi Gangadhar 👋</h1>
-            <p className="text-slate-700 text-sm">Let’s reach your goal faster today!</p>
+            <p className="text-slate-700 text-sm">Ready to pack your bags for your next adventure?</p>
           </div>
           {/* Right: Buttons and avatar */}
           <div className="flex items-center gap-3 slide-up">
@@ -140,7 +159,7 @@ function Header({ onOpenStreak, streakCount = 0 }) {
               aria-label="Referral earnings"
             >
               <span>💰</span>
-              <span className="font-semibold">₹150</span>
+              <span className="font-semibold">₹{(referralEarn > 0 ? referralEarn : 50).toLocaleString('en-IN')}</span>
             </button>
             {/* Streak button */}
             <button
@@ -162,11 +181,34 @@ function Header({ onOpenStreak, streakCount = 0 }) {
   )
 }
 
-function SavingsSummary({ goals }) {
+function SavingsSummary({ goals, groups = [] }) {
   const navigate = useNavigate()
-  const sumSaved = goals.reduce((acc, g) => acc + (g.current || 0), 0)
+  // Sum solo trips only from goals, excluding demo Goa Trip which is represented as a group card
+  const sumSoloSaved = goals
+    .filter((g) => g.type !== 'group' && g.title !== 'Goa Trip 2026')
+    .reduce((acc, g) => acc + (g.current || 0), 0)
+  // Sum per-user savings from groups (prefer explicit yourSaved, else approximate by split current/membersCount)
+  const sumGroupSaved = (groups && groups.length > 0)
+    ? groups.reduce((acc, grp) => {
+        const members = grp.membersCount || (Array.isArray(grp.members) ? grp.members.length : 0) || 1
+        const yourSaved = typeof grp.yourSaved === 'number' ? grp.yourSaved : Math.round((grp.current || 0) / members)
+        return acc + (yourSaved || 0)
+      }, 0)
+    : 3500 // demo fallback: Goa Squad user saved
+  const sumSaved = sumSoloSaved + sumGroupSaved
   const amount = useCountUp(sumSaved, 1200)
-  const targetTotal = goals.reduce((acc, g) => acc + (g.total || 0), 0)
+  // Target = solo totals plus per-user share of group targets
+  const soloTarget = goals
+    .filter((g) => g.type !== 'group' && g.title !== 'Goa Trip 2026')
+    .reduce((acc, g) => acc + (g.total || 0), 0)
+  const groupTargetShare = (groups && groups.length > 0)
+    ? groups.reduce((acc, grp) => {
+        const members = grp.membersCount || (Array.isArray(grp.members) ? grp.members.length : 0) || 1
+        const yourShare = Math.round((grp.target || 0) / members)
+        return acc + (yourShare || 0)
+      }, 0)
+    : Math.round(60000 / 4) // demo fallback share for Goa Squad (target 60000, 4 members)
+  const targetTotal = soloTarget + groupTargetShare
   const percent = Math.round((amount / (targetTotal || 1)) * 100)
   return (
     <section className="px-5 mt-5">
@@ -195,14 +237,15 @@ function SavingsSummary({ goals }) {
   )
 }
 
-function GoalCard({ title, current, total, percent, autopay, imageSrc, interactiveTip, emoji, deletable, onDelete }) {
+function GoalCard({ title, current, total, percent, destination, imageSrc, interactiveTip, emoji, deletable, onDelete }) {
   const [tipOpen, setTipOpen] = useState(false)
-  const showImage = Boolean(imageSrc)
-  const summaryText = `Saved ₹${current.toLocaleString('en-IN')} / ₹${total.toLocaleString('en-IN')} (${percent}%) · Next AutoPay: ₹${autopay?.amount || 0} on Wed`
+  const [imageErrored, setImageErrored] = useState(false)
+  const hasImage = Boolean(imageSrc) && !imageErrored
+  const summaryText = `Saved ₹${current.toLocaleString('en-IN')} / ₹${total.toLocaleString('en-IN')} (${percent}%)`
   const barColor = '#38bdf8'
 
   return (
-    <div className={`card slide-up relative overflow-hidden rounded-xl ${showImage ? '' : 'p-4'} h-[21rem] group`}
+    <div className={`card slide-up relative overflow-hidden rounded-xl h-[21rem] group`}
          onClick={(e) => {
            if (interactiveTip) { e.preventDefault(); e.stopPropagation(); setTipOpen(v => !v) }
          }}>
@@ -215,98 +258,122 @@ function GoalCard({ title, current, total, percent, autopay, imageSrc, interacti
           Delete
         </button>
       )}
-      {showImage && (
-        <>
-          {/* Top: Image area */}
-          <div className="relative h-[13.5rem]">
-            <img
-              src={imageSrc}
-              alt="Goa Beach Shack"
-              className="absolute inset-0 w-full h-full object-cover transition duration-300 group-hover:brightness-105"
-              width={800}
-              height={500}
-              onError={(e) => { e.currentTarget.style.display = 'none' }}
-            />
-            {/* Fallback gradient if image missing */}
-            <div className="absolute inset-0 bg-gradient-to-br from-teal/20 via-sky/20 to-indigo/20" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/35" />
-          </div>
 
-          {/* Bottom: Info area */}
-          <div className="relative z-10 px-4 py-3 bg-white flex items-center justify-between h-28">
-            {/* Left text */}
-            <div className="flex-1 min-w-0 pr-3">
-              <div className="font-semibold truncate">{title} {emoji || ''}</div>
-              <div className="mt-1 text-sm text-slate-700">Saved: ₹{current.toLocaleString('en-IN')}</div>
-              <div className="mt-2 flex items-center gap-2">
-                {autopay && (
-                  <div className="inline-flex items-center gap-2 text-xs px-2 py-1 rounded-full bg-teal/10 text-teal ring-1 ring-teal/30">
-                    <span className="font-medium">AutoPay</span>
-                    <span>₹{autopay.amount}/week 🔁</span>
-                  </div>
-                )}
-                <button
-                  className="text-xs px-3 py-1 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); alert('Withdraw coming soon') }}
-                >
-                  Withdraw
-                </button>
-              </div>
-            </div>
-            {/* Right donut with center label */}
-            <div className="ml-3 shrink-0 relative w-[72px] h-[72px]">
-              <CompletionDonut goals={[{ title, current }]} saved={current} target={total} size={72} thickness={12} />
-              <div className="absolute inset-0 z-10 flex items-center justify-center text-[11px] font-semibold text-slate-800 text-center leading-tight px-1">
-                ₹{total.toLocaleString('en-IN')}
-              </div>
-            </div>
+      {/* Top: Image or placeholder area */}
+      <div className="relative h-[13.5rem]">
+        {hasImage ? (
+          <img
+            src={imageSrc}
+            alt={title || 'Trip'}
+            className="absolute inset-0 w-full h-full object-cover transition duration-300 group-hover:brightness-105"
+            width={800}
+            height={500}
+            onError={() => setImageErrored(true)}
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-6xl drop-shadow-sm">👤</div>
           </div>
+        )}
+        {/* Overlay gradients */}
+        <div className="absolute inset-0 bg-gradient-to-br from-teal/20 via-sky/20 to-indigo/20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/35" />
+      </div>
 
-          {/* Tap tooltip */}
-          {interactiveTip && tipOpen && (
-            <div className="absolute -top-24 left-4 z-20 card p-3 w-[260px] text-sm text-slate-800">
-              {summaryText}
-            </div>
+      {/* Bottom: Info area - Solo framework */}
+      <div className="relative z-10 px-4 py-3 bg-white flex items-start justify-between h-28">
+        {/* Bottom Left: Trip Name, Destination, Withdraw */}
+        <div className="min-w-0 pr-3">
+          <div className="font-semibold truncate">{title} {emoji || ''}</div>
+          {destination && (
+            <div className="text-xs text-slate-600 truncate">Destination: {destination}</div>
           )}
-        </>
-      )}
+          <button
+            className="mt-2 bg-slate-800 text-white rounded-full px-3 py-1.5 text-xs shadow-soft"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent('tripjar:withdraw', { detail: { type: 'solo', title, current, total } })) }}
+          >
+            Withdraw
+          </button>
+        </div>
+        {/* Bottom Right: Saved, Total Budget */}
+        <div className="text-right">
+          <div className="text-xs text-slate-600">Saved</div>
+          <div className="text-sm font-medium text-slate-800">₹{current.toLocaleString('en-IN')}</div>
+          <div className="mt-1 text-xs text-slate-600">Total Budget</div>
+          <div className="text-sm font-medium text-slate-800">₹{total.toLocaleString('en-IN')}</div>
+        </div>
+      </div>
 
-      {!showImage && (
-        <>
-          <div className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky to-mint flex items-center justify-center text-xl">🏷️</div>
-              <div className="flex-1">
-                <div className="font-semibold">{title}</div>
-                <div className="text-sm text-slate-600">₹{current.toLocaleString('en-IN')} / ₹{total.toLocaleString('en-IN')}</div>
-              </div>
-              <div className="w-16 text-right font-semibold text-slate-700">{percent}%</div>
-            </div>
-            <div className="mt-3">
-              <ProgressBar percent={percent} color={barColor} />
-            </div>
-            {autopay && (
-              <div className="mt-2 inline-flex items-center gap-2 text-xs px-2 py-1 rounded-full bg-teal/10 text-teal">
-                <span className="font-medium">AutoPay:</span>
-                <span>₹{autopay.amount}/week 🔁</span>
-              </div>
-            )}
-            <div className="mt-3">
-              <button
-                className="text-xs px-3 py-1 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); alert('Withdraw coming soon') }}
-              >
-                Withdraw
-              </button>
-            </div>
-          </div>
-        </>
+      {/* Tap tooltip */}
+      {interactiveTip && tipOpen && (
+        <div className="absolute -top-24 left-4 z-20 card p-3 w-[260px] text-sm text-slate-800">
+          {summaryText}
+        </div>
       )}
     </div>
   )
 }
 
-function ActiveGoals({ goals }) {
+function UnifiedGroupCard({ group }) {
+  const percent = Math.round(((group.current || 0) / ((group.target || 1))) * 100)
+  const membersCount = group.membersCount || (Array.isArray(group.members) ? group.members.length : 0)
+  const yourShare = membersCount > 0 ? Math.round((group.target || 0) / membersCount) : (group.target || 0)
+  const destination = group.destination || group.place || group.city || group.location
+  const yourSaved = typeof group.yourSaved === 'number' ? group.yourSaved : (membersCount > 0 ? Math.round((group.current || 0) / membersCount) : 0)
+  const goTo = (group.name || '').toLowerCase().includes('goa') ? '/groups/goa-squad' : '/groups'
+  const showImage = !!group.image
+  return (
+    <NavLink to={goTo} className="block">
+      <div className={`card slide-up relative overflow-hidden rounded-xl h-[21rem]`}>
+        {/* Top: Image or placeholder */}
+        <div className="relative h-[13.5rem]">
+          {showImage ? (
+            <img
+              src={group.image}
+              alt={group.name || 'Group trip'}
+              className="absolute inset-0 w-full h-full object-cover"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-6xl drop-shadow-sm">👥</div>
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/35" />
+        </div>
+
+        {/* Bottom info */}
+        <div className="relative z-10 bg-white px-4 py-3">
+          <div className="grid gap-3">
+            <div className="flex items-start justify-between">
+              {/* Left side: Name, Destination, Withdraw */}
+              <div className="min-w-0">
+                <div className="font-semibold truncate">{group.name}</div>
+                {destination && (
+                  <div className="text-xs text-slate-600 truncate">Destination: {destination}</div>
+                )}
+                <button
+                  className="mt-2 bg-slate-800 text-white rounded-full px-3 py-1.5 text-xs shadow-soft"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent('tripjar:withdraw', { detail: { type: 'group', id: group.id, title: group.name, yourSaved, yourShare, current: group.current || 0, target: group.target || 0, membersCount } })) }}
+                >
+                  Withdraw
+                </button>
+              </div>
+              {/* Right side: Saved, Combined */}
+              <div className="text-right">
+                <div className="text-xs text-slate-600">Saved: ₹{(yourSaved || 0).toLocaleString('en-IN')}/₹{(yourShare || 0).toLocaleString('en-IN')}</div>
+                <div className="text-xs text-slate-600">Combined: ₹{(group.current || 0).toLocaleString('en-IN')}/₹{(group.target || 0).toLocaleString('en-IN')}</div>
+              </div>
+            </div>
+            {/* Progress bar removed as requested */}
+          </div>
+        </div>
+      </div>
+    </NavLink>
+  )
+}
+
+function ActiveGoals({ goals, groups = [] }) {
   const deleteGoal = (id) => {
     try {
       const raw = localStorage.getItem('tripjar.userGoals')
@@ -320,56 +387,100 @@ function ActiveGoals({ goals }) {
   }
   return (
     <section className="px-5 mt-6">
-      <h3 className="text-sm font-semibold text-slate-700 mb-2 slide-up">Active Goals</h3>
+      <h3 className="text-sm font-semibold text-slate-700 mb-2 slide-up">Your Active Trips 🌍</h3>
       <div className="grid gap-3">
-        {goals.map((g, idx) => {
+        {goals.filter(g => g.type !== 'group').map((g, idx) => {
           const percent = Math.round((g.current / (g.total || 1)) * 100)
           if (g.title === 'Goa Trip 2026') {
-            // Special card with image, tooltip on tap
+            // Replace demo solo Goa card with a demo Goa Squad group card
+            const demoGoaGroup = {
+              id: 'demo-goa-squad',
+              name: 'Goa Squad',
+              destination: 'Goa',
+              current: 12500, // combined saved
+              target: 60000,  // combined target
+              yourSaved: 3500,
+              membersCount: 4,
+              image: `${import.meta.env.BASE_URL}assets/goa-shack.png`,
+            }
             return (
               <div key={idx} className="w-full">
-                <GoalCard
-                  title={g.title}
-                  current={g.current}
-                  total={g.total}
-                  percent={percent}
-                  autopay={g.autopay}
-                  imageSrc={`${import.meta.env.BASE_URL}assets/goa-shack.png`}
-                  emoji="🏖️"
-                  interactiveTip
-                />
+                <UnifiedGroupCard group={demoGoaGroup} />
               </div>
             )
           }
           if (g.title === 'Ladakh 2026') {
+            // Custom solo card layout: no donut, Saved moved to right, left shows Destination and Withdraw
+            const params = new URLSearchParams({
+              title: g.title,
+              current: String(g.current || 0),
+              total: String(g.total || 0),
+              destination: 'Ladakh',
+              date: '2026-02-01',
+            }).toString()
             return (
-              <div key={idx} className="w-full">
-                <GoalCard
-                  title={g.title}
-                  current={g.current}
-                  total={g.total}
-                  percent={percent}
-                  imageSrc={`${import.meta.env.BASE_URL}assets/Ladakh.jpg`}
-                  emoji="🏍️"
-                />
-              </div>
+              <NavLink key={idx} to={`/goal-detail?${params}`} className="w-full block">
+                <div className="card slide-up relative overflow-hidden rounded-xl h-[21rem]">
+                  {/* Top image */}
+                  <div className="relative h-[13.5rem]">
+                    <img
+                      src={`${import.meta.env.BASE_URL}assets/Ladakh.jpg`}
+                      alt={g.title}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/35" />
+                  </div>
+                  {/* Bottom info */}
+                  <div className="relative z-10 px-4 py-3 bg-white flex items-start justify-between h-28">
+                    {/* Left: Destination + Withdraw */}
+                    <div className="min-w-0 pr-3">
+                      <div className="font-semibold truncate">{g.title}</div>
+                      <div className="text-xs text-slate-600">Destination: Ladakh</div>
+                <button
+                  className="mt-2 bg-slate-800 text-white rounded-full px-3 py-1.5 text-xs shadow-soft"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent('tripjar:withdraw', { detail: { type: 'solo', title: g.title, current: g.current || 0, total: g.total || 0 } })) }}
+                >
+                  Withdraw
+                </button>
+                    </div>
+                    {/* Right: Saved and Total Budget (single-line each) */}
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-slate-800">Saved: {(g.current || 0).toLocaleString('en-IN')}</div>
+                      <div className="mt-1 text-sm font-medium text-slate-800">Total Budget: {(g.total || 0).toLocaleString('en-IN')}</div>
+                    </div>
+                  </div>
+                </div>
+              </NavLink>
             )
           }
           const canDelete = g.id && (g.current || 0) === 0
+          const params = new URLSearchParams({
+            title: g.title,
+            current: String(g.current || 0),
+            total: String(g.total || 0),
+            destination: g.destination || '',
+            date: g.date || '',
+          }).toString()
           return (
-            <NavLink key={idx} to="/goal-detail" className="w-full">
+            <NavLink key={idx} to={`/goal-detail?${params}`} className="w-full">
               <GoalCard
                 title={g.title}
                 current={g.current}
                 total={g.total}
                 percent={percent}
-                autopay={g.autopay}
+                imageSrc={g.image}
+                destination={g.destination}
                 deletable={!!canDelete}
                 onDelete={() => deleteGoal(g.id)}
               />
             </NavLink>
           )
         })}
+        {groups.map((grp, i) => (
+          <div key={`grp-${grp.id || i}`} className="w-full">
+            <UnifiedGroupCard group={grp} />
+          </div>
+        ))}
       </div>
     </section>
   )
@@ -519,6 +630,9 @@ function StreakCalendar({ open, onClose, today, streakDays = [], randomFireSet =
 function Dashboard() {
   const [localGroups, setLocalGroups] = useState([])
   const [userGoals, setUserGoals] = useState([])
+  const [withdrawOpen, setWithdrawOpen] = useState(false)
+  const [withdrawTrip, setWithdrawTrip] = useState(null)
+  const [withdrawMsg, setWithdrawMsg] = useState('')
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('tripjar.groups') || '[]')
@@ -545,19 +659,29 @@ function Dashboard() {
     }
     window.addEventListener('tripjar:dataUpdated', refresh)
     window.addEventListener('storage', refresh)
+    const handleWithdraw = (e) => {
+      const d = e.detail || {}
+      setWithdrawTrip(d)
+      setWithdrawOpen(true)
+    }
+    window.addEventListener('tripjar:withdraw', handleWithdraw)
     return () => {
       window.removeEventListener('tripjar:dataUpdated', refresh)
       window.removeEventListener('storage', refresh)
+      window.removeEventListener('tripjar:withdraw', handleWithdraw)
     }
   }, [])
 
   const goals = useMemo(() => {
-    const groupGoals = localGroups.map(g => ({ title: g.name, current: g.current || 0, total: g.target || 0 }))
+    const groupGoals = localGroups.map(g => ({ title: g.name, current: g.current || 0, total: g.target || 0, type: 'group', image: g.image }))
     const userGoalCards = userGoals.map(g => ({
       id: g.id,
       title: g.title,
       current: g.current || 0,
       total: g.total || 0,
+      image: g.image,
+      destination: g.destination,
+      date: g.date,
       autopay: g.autoPay ? { amount: g.intervalAmount || 0 } : undefined,
     }))
     return [...goalsData, ...groupGoals, ...userGoalCards]
@@ -638,10 +762,26 @@ function Dashboard() {
   return (
     <div className="min-h-screen pb-24">
       <Header onOpenStreak={() => setStreakOpen(true)} streakCount={streakDays.length} />
-      <SavingsSummary goals={goals} />
-      <ActiveGoals goals={goals} />
-      <TripGroupCard />
+      <SavingsSummary goals={goals} groups={localGroups} />
+      <ActiveGoals goals={goals} groups={localGroups} />
       <BottomNav goals={goals} />
+      {withdrawOpen && (
+        <WithdrawModal
+          open={withdrawOpen}
+          onClose={() => setWithdrawOpen(false)}
+          trip={withdrawTrip}
+          onSuccess={({ finalAmount, penaltyAmount, type }) => {
+            const msg = `₹${finalAmount.toLocaleString('en-IN')} withdrawn successfully!${penaltyAmount > 0 ? ` A ₹${penaltyAmount.toLocaleString('en-IN')} penalty was applied for early withdrawal.` : ''}`
+            setWithdrawMsg(msg + ' ' + (type === 'group' ? 'Your group contribution has been updated.' : 'Your solo savings have been updated.'))
+            setTimeout(() => setWithdrawMsg(''), 2500)
+          }}
+        />
+      )}
+      {withdrawMsg && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 card px-4 py-2 bg-white shadow-soft text-sm text-slate-800">
+          {withdrawMsg}
+        </div>
+      )}
       {streakOpen && (
         <StreakCalendar open={true} onClose={() => setStreakOpen(false)} today={today} streakDays={streakDays} randomFireSet={randomFireSet} />
       )}
@@ -711,6 +851,41 @@ function ProfilePage() {
 }
 
 export default function App() {
+  const AddMoneyRoute = () => {
+    const [localGroups, setLocalGroups] = useState([])
+    const [userGoals, setUserGoals] = useState([])
+    useEffect(() => {
+      try {
+        const stored = JSON.parse(localStorage.getItem('tripjar.groups') || '[]')
+        setLocalGroups(Array.isArray(stored) ? stored : [])
+      } catch {}
+      try {
+        const storedGoals = JSON.parse(localStorage.getItem('tripjar.userGoals') || '[]')
+        setUserGoals(Array.isArray(storedGoals) ? storedGoals : [])
+      } catch {}
+    }, [])
+    const combined = useMemo(() => {
+      let groupGoals = localGroups.map(g => ({
+        title: g.name,
+        current: g.current || 0,
+        total: g.target || 0,
+        type: 'group',
+        membersCount: g.membersCount || (Array.isArray(g.members) ? g.members.length : undefined),
+      }))
+      // Fallback demo group when none exist in localStorage
+      if (groupGoals.length === 0) {
+        groupGoals = [{ title: 'Goa Squad', current: 12500, total: 60000, type: 'group', membersCount: 4 }]
+      }
+      const userGoalCards = userGoals.map(g => ({
+        title: g.title,
+        current: g.current || 0,
+        total: g.total || 0,
+        type: 'solo',
+      }))
+      return [...goalsData, ...groupGoals, ...userGoalCards]
+    }, [localGroups, userGoals])
+    return <AddMoneyPage goals={combined} />
+  }
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
@@ -721,10 +896,10 @@ export default function App() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/profile/autopay" element={<AutoPaySettings />} />
       <Route path="/profile/help" element={<SupportHelp />} />
-      <Route path="/create-goal" element={<CreateGoal />} />
+      <Route path="/new-solo-trip" element={<NewSoloTrip />} />
       <Route path="/plan-trip" element={<PlanTrip />} />
       <Route path="/goal-detail" element={<GoalDetail goals={goalsData} />} />
-      <Route path="/add-money" element={<AddMoneyPage goals={goalsData} />} />
+      <Route path="/add-money" element={<AddMoneyRoute />} />
     </Routes>
   )
 }

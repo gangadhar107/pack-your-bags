@@ -21,7 +21,7 @@ export default function CreateGoal() {
       {/* Header */}
       <header className="flex items-center gap-3 px-5 pt-6 slide-up">
         <button aria-label="Back" onClick={() => navigate('/')} className="card p-2 bounce-soft">←</button>
-        <h1 className="text-lg font-semibold">What are you saving for?</h1>
+        <h1 className="text-lg font-semibold">New Solo Trip</h1>
       </header>
       {/* Custom goal form only */}
       <section className="px-5 mt-5">
@@ -29,7 +29,7 @@ export default function CreateGoal() {
           <div className="accent-bar bg-gradient-to-r from-teal to-sky" />
           <div className="grid gap-4 pt-3">
             <div>
-              <label className="text-sm text-slate-600">Goal name</label>
+              <label className="text-sm text-slate-600">Trip name</label>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Goa Trip" className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal" />
             </div>
             <div>
@@ -86,7 +86,7 @@ export default function CreateGoal() {
               disabled={!name.trim() || !date || !(parseInt(target || '0', 10) > 0)}
               className={`mt-2 bounce-soft bg-gradient-to-r from-teal to-orange text-white rounded-full px-4 py-3 shadow-soft font-semibold ${(!name.trim() || !date || !(parseInt(target || '0', 10) > 0)) ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
-              Create Goal 🎯
+              Create Trip
             </button>
             {(!name.trim() || !date || !(parseInt(target || '0', 10) > 0)) && (
               <p className="text-xs text-red-600">Enter name, date, and a positive target.</p>

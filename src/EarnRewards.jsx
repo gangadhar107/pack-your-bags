@@ -89,12 +89,37 @@ export default function EarnRewards() {
   const [copiedCode, setCopiedCode] = useState(false)
   const [copiedMsg, setCopiedMsg] = useState(false)
 
+  // Initialize from localStorage if available
+  useEffect(() => {
+    try {
+      const storedJoined = parseInt(localStorage.getItem('tripjar.referrals.joinedCount') || '0', 10) || 0
+      if (storedJoined > 0) setJoined(Math.min(goalFriends, storedJoined))
+    } catch {}
+  }, [])
+
   const handleShare = () => {
-    setJoined((j) => Math.min(goalFriends, j + 1))
+    setJoined((j) => {
+      const next = Math.min(goalFriends, j + 1)
+      try {
+        localStorage.setItem('tripjar.referrals.joinedCount', String(next))
+        localStorage.setItem('tripjar.referralEarnings', String(next * 50))
+        window.dispatchEvent(new Event('tripjar:dataUpdated'))
+      } catch {}
+      return next
+    })
     setBurstCount((n) => n + 1)
   }
 
-  const shareMessage = `Hey! Join me on Trip Jar 🎉\nUse my referral code ${code} to get ₹100 welcome bonus. I earn ₹200 when 3 friends join. Let’s save together!`
+  // Keep localStorage and other screens in sync with joined -> referral earnings
+  useEffect(() => {
+    try {
+      localStorage.setItem('tripjar.referrals.joinedCount', String(joined))
+      localStorage.setItem('tripjar.referralEarnings', String(joined * 50))
+      window.dispatchEvent(new Event('tripjar:dataUpdated'))
+    } catch {}
+  }, [joined])
+
+  const shareMessage = `Hey! Join me on Pack Your Bags 🎉\nUse my referral code ${code} to get ₹100 welcome bonus. I earn ₹200 when 3 friends join. Let’s save together!`
 
   const shareWhatsApp = () => {
     handleShare()

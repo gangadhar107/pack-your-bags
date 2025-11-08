@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import TermsModal from './TermsModal'
 
 export default function AddMoneyModal({ open, onClose, goals = [], onSuccess }) {
   const [amount, setAmount] = useState(100)
@@ -9,9 +10,11 @@ export default function AddMoneyModal({ open, onClose, goals = [], onSuccess }) 
   const [frequency, setFrequency] = useState('Weekly')
   const [intervalAmount, setIntervalAmount] = useState('500')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [termsOpen, setTermsOpen] = useState(false)
   const chipValues = [50, 100, 200, 500]
 
-  const selectedGoal = goals[selectedGoalIdx] || { title: 'My Goal' }
+  const displayGoals = Array.isArray(goals) ? goals.filter((g) => !g.hiddenInAddMoney) : []
+  const selectedGoal = displayGoals[selectedGoalIdx] || { title: 'My Trip' }
   const computedAmount = useMemo(() => {
     const c = parseInt(customAmount || '0', 10)
     return c > 0 ? c : amount
@@ -37,7 +40,7 @@ export default function AddMoneyModal({ open, onClose, goals = [], onSuccess }) 
       <div className="w-full sm:w-[520px] m-0 sm:m-6 rounded-2xl shadow-2xl bg-white/80 border border-white/60 p-5 sm:p-6">
         {/* Title */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Add to your savings 💰</h2>
+          <h2 className="text-lg font-semibold">Add to your trip savings 💰</h2>
           <button aria-label="Close" onClick={onClose} className="card p-2">✖</button>
         </div>
 
@@ -69,15 +72,15 @@ export default function AddMoneyModal({ open, onClose, goals = [], onSuccess }) 
 
         {/* Goal dropdown */}
         <div className="mt-5">
-          <label className="text-sm text-slate-600">Add to which goal?</label>
+          <label className="text-sm text-slate-600">Add money to which trip?</label>
           <select
             className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 bg-white text-slate-800"
             value={selectedGoalIdx}
             onChange={(e) => setSelectedGoalIdx(parseInt(e.target.value, 10))}
           >
-            {goals.length === 0 && <option value={0}>My Goal</option>}
-            {goals.map((g, i) => (
-              <option key={i} value={i}>{g.title}</option>
+            {displayGoals.length === 0 && <option value={0}>My Trip</option>}
+            {displayGoals.map((g, i) => (
+              <option key={i} value={i}>{g.type === 'group' ? `Group: ${g.title}` : `Solo: ${g.title}`}</option>
             ))}
           </select>
         </div>
@@ -127,11 +130,19 @@ export default function AddMoneyModal({ open, onClose, goals = [], onSuccess }) 
 
         {/* CTA */}
         <div className="mt-6 flex items-center justify-between">
-          <div className="text-xs text-slate-600">Goal: <span className="font-semibold">{selectedGoal.title}</span></div>
+          <div className="text-xs text-slate-600">Trip: <span className="font-semibold">{selectedGoal.title}</span></div>
           <button disabled={isProcessing} onClick={handleAddMoney} className="bounce-soft bg-gradient-to-r from-teal to-orange text-white rounded-full px-5 py-3 shadow-soft font-semibold">
             {isProcessing ? 'Processing…' : `Add ₹${computedAmount.toLocaleString('en-IN')}`}
           </button>
         </div>
+
+        {/* Short T&C notice */}
+        <div className="mt-3 text-xs text-slate-600">
+          💬 By continuing, you agree that your added amount will contribute toward your selected trip savings goal. You can withdraw anytime, but bonuses or streak rewards may pause for early withdrawals.{' '}
+          <button className="text-teal font-semibold" onClick={() => setTermsOpen(true)}>View Terms →</button>
+        </div>
+
+        <TermsModal open={termsOpen} onClose={() => setTermsOpen(false)} />
       </div>
     </div>
   )

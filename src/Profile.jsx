@@ -10,21 +10,30 @@ function GradientAmount({ value }) {
 export default function Profile() {
   const navigate = useNavigate()
   const [wallet, setWallet] = useState(0)
+  const [referralEarn, setReferralEarn] = useState(0)
   const [autopayOn, setAutopayOn] = useState(true)
   const [logoutOpen, setLogoutOpen] = useState(false)
 
   useEffect(() => {
-    const DEFAULT_GOALS_CURRENT_SUM = 3000 + 20000 // Goa Trip 2026 + Ladakh 2026
     const readArray = (key) => {
       try { return JSON.parse(localStorage.getItem(key) || '[]') } catch { return [] }
     }
-    const sumCurrents = (arr) => arr.reduce((acc, item) => acc + (parseInt(item?.current || 0, 10) || 0), 0)
+    const sumSoloCurrents = (arr) => arr.reduce((acc, item) => acc + (parseInt(item?.current || 0, 10) || 0), 0)
 
     const recompute = () => {
       const groups = readArray('tripjar.groups')
       const goals = readArray('tripjar.userGoals')
-      const sum = DEFAULT_GOALS_CURRENT_SUM + sumCurrents(groups) + sumCurrents(goals)
-      setWallet(sum)
+      // Per-user group savings (prefer yourSaved, else approximate by split current/membersCount)
+      const groupSaved = Array.isArray(groups) ? groups.reduce((acc, grp) => {
+        const members = grp.membersCount || (Array.isArray(grp.members) ? grp.members.length : 0) || 1
+        const yourSaved = typeof grp.yourSaved === 'number' ? grp.yourSaved : Math.round((grp.current || 0) / members)
+        return acc + (parseInt(yourSaved || 0, 10) || 0)
+      }, 0) : 0
+      // Solo goals savings (user-created goals)
+      const soloSaved = Array.isArray(goals) ? sumSoloCurrents(goals) : 0
+      const referral = parseInt(localStorage.getItem('tripjar.referralEarnings') || '0', 10) || 0
+      setReferralEarn(referral)
+      setWallet(groupSaved + soloSaved + referral)
     }
 
     // Initial compute
@@ -70,12 +79,8 @@ export default function Profile() {
           <div className="accent-bar bg-gradient-to-r from-teal to-sky" />
           <div className="pt-3 flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold text-slate-700">TripJar Wallet</div>
-              {wallet > 0 ? (
-                <GradientAmount value={wallet} />
-              ) : (
-                <div className="text-slate-700">Let’s start saving today! ✨</div>
-              )}
+              <div className="text-sm font-semibold text-slate-700">Pack Your Bags Wallet</div>
+              <GradientAmount value={(wallet > 0 ? wallet : 23550)} />
               <div className={`mt-2 inline-flex items-center gap-2 text-xs px-2 py-1 rounded-full ${autopayOn ? 'bg-teal/10 text-teal' : 'bg-orange/10 text-orange'}`}>{autopayOn ? 'AutoPay ON 🔁' : 'AutoPay OFF'}</div>
             </div>
             <button onClick={() => navigate('/profile/autopay')} className="bounce-soft bg-gradient-to-r from-teal to-orange text-white rounded-full px-4 py-2 shadow-soft text-sm">Manage AutoPay</button>
@@ -89,9 +94,9 @@ export default function Profile() {
           <NavLink to="/earn" className="card p-4 text-center hover:translate-y-[-2px] transition-transform">
             <div className="text-xl">💸</div>
             <div className="text-sm text-slate-600">Referral Earnings</div>
-            <div className="font-semibold">₹150</div>
+            <div className="font-semibold">₹{(referralEarn > 0 ? referralEarn : 50).toLocaleString('en-IN')}</div>
           </NavLink>
-          <NavLink to="/create-goal" className="card p-4 text-center hover:translate-y-[-2px] transition-transform">
+          <NavLink to="/new-solo-trip" className="card p-4 text-center hover:translate-y-[-2px] transition-transform">
             <div className="text-xl">🎯</div>
             <div className="text-sm text-slate-600">Active Goals</div>
             <div className="font-semibold">2</div>
@@ -139,7 +144,7 @@ export default function Profile() {
 
       {/* Footer */}
       <footer className="px-5 mt-6 text-center text-slate-700">
-        TripJar v1.0.0 — Made with 💙 for students
+        Pack Your Bags v1.0.0 — Made with 💙 for students
         <div className="mt-2 text-sm">
           <a href="#" className="underline">Terms of Use</a> | <a href="#" className="underline">Privacy Policy</a>
         </div>

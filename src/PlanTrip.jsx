@@ -41,6 +41,7 @@ export default function PlanTrip() {
   const [destError, setDestError] = useState('')
   const [placesReady, setPlacesReady] = useState(false)
   const [sessionToken, setSessionToken] = useState(null)
+  const [image, setImage] = useState('')
 
   // Local mock dataset for destinations (used for autocomplete now)
   const mockDestinations = [
@@ -218,6 +219,7 @@ export default function PlanTrip() {
       current: 0,
       target: parseInt(budget || '0', 10) || 0,
       membersCount: parseInt(members || '2', 10) || 2,
+      image,
       minMonthly: parseInt(minMonthly || '0', 10) || 0,
       date,
     }
@@ -261,6 +263,24 @@ export default function PlanTrip() {
                 )}
               </div>
               <FloatingField label="Total budget (₹)" value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^0-9]/g, ''))} />
+              <div className="grid gap-2">
+                <div className="text-sm text-slate-700">Trip Picture</div>
+                {image && (
+                  <img src={image} alt="Group Trip" className="w-full h-40 object-cover rounded-xl border border-slate-200" />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    const reader = new FileReader()
+                    reader.onload = () => setImage(String(reader.result || ''))
+                    reader.readAsDataURL(file)
+                  }}
+                  className="rounded-xl border border-slate-200 px-3 py-2 bg-white"
+                />
+              </div>
               <FloatingField label="Month" type="month" value={date ? date.slice(0,7) : ''} onChange={(e) => setDate(e.target.value + '-01')} />
               <FloatingField label="Expected members" value={members} onChange={(e) => setMembers(e.target.value.replace(/[^0-9]/g, ''))} />
               <FloatingField label="Minimum monthly save (₹)" value={String(minMonthly)} onChange={() => {}} />

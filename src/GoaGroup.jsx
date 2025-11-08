@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import BottomNav from './BottomNav'
-import AddMoneyModal from './AddMoneyModal'
 
 function ProgressBar({ percent = 0, color = '#38bdf8' }) {
   const barRef = useRef(null)
@@ -128,8 +127,6 @@ export default function GoaGroup({ goals = [] }) {
     return `conic-gradient(${segments.join(', ')})`
   }, [combinedTarget])
   const animatedCurrent = useCountUp(combinedCurrent, 900)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [burstCount, setBurstCount] = useState(0)
 
   return (
     <div className="min-h-screen pb-40">
@@ -206,29 +203,14 @@ export default function GoaGroup({ goals = [] }) {
       </section>
 
       {/* Floating actions pinned bottom-left and bottom-right: icon-only by default, expand label on hover */}
-      <div className="fixed bottom-20 left-4 z-40 group">
-        <button className="bounce-soft bg-teal-sky text-white rounded-full h-12 px-3 shadow-soft inline-flex items-center gap-2 transition-all">
-          <span className="text-xl">💬</span>
-          <span className="text-sm font-semibold overflow-hidden max-w-0 opacity-0 transition-all duration-200 group-hover:max-w-[160px] group-hover:opacity-100">Group Chat (3 unread)</span>
-        </button>
-      </div>
+      {/* Removed non-functional Group Chat icon */}
       <div className="fixed bottom-20 right-4 z-40 group">
-        <button onClick={() => setModalOpen(true)} className="bounce-soft bg-orange-gradient text-white rounded-full h-12 px-3 shadow-soft inline-flex items-center gap-2 transition-all">
+        <button onClick={() => navigate('/add-money')} className="bounce-soft bg-orange-gradient text-white rounded-full h-12 px-3 shadow-soft inline-flex items-center gap-2 transition-all">
           <span className="text-xl">➕</span>
           <span className="text-sm font-semibold overflow-hidden max-w-0 opacity-0 transition-all duration-200 group-hover:max-w-[180px] group-hover:opacity-100">Add to Group Savings</span>
         </button>
       </div>
       <BottomNav />
-      <AddMoneyModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        goals={goals.length ? goals : [{ title: 'Goa Trip 2024' }]}
-        onSuccess={({ amount }) => {
-          setCombinedCurrent((c) => Math.min(combinedTarget, c + amount))
-          setBurstCount((b) => b + 1)
-        }}
-      />
-      <ConfettiBurst trigger={burstCount} />
     </div>
   )
 }
