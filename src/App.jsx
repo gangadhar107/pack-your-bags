@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom'
+import Landing from './Landing'
+import Login from './Login'
+import SignUp from './SignUp'
 import CreateGoal from './CreateGoal'
 import PlanTrip from './PlanTrip'
 import GoaGroup from './GoaGroup'
@@ -126,11 +129,29 @@ function ProgressBar({ percent = 0, color = '#22c55e' }) {
 function Header({ onOpenStreak, streakCount = 0 }) {
   const navigate = useNavigate()
   const [referralEarn, setReferralEarn] = useState(0)
+  const [userName, setUserName] = useState('')
+  const [avatarSeed, setAvatarSeed] = useState('G')
+  const [welcomeOnce, setWelcomeOnce] = useState('')
   useEffect(() => {
     const refresh = () => {
       try {
         const val = parseInt(localStorage.getItem('tripjar.referralEarnings') || '0', 10) || 0
         setReferralEarn(val)
+      } catch {}
+      try {
+        const raw = localStorage.getItem('pyb.user')
+        if (raw) {
+          const u = JSON.parse(raw)
+          const name = (u && u.name) ? u.name : ''
+          setUserName(name)
+          const initials = name
+            ? name.split(/\s+/).filter(Boolean).map(s => s[0].toUpperCase()).slice(0,2).join('')
+            : 'G'
+          setAvatarSeed(initials || 'G')
+        } else {
+          setUserName('')
+          setAvatarSeed('G')
+        }
       } catch {}
     }
     refresh()
@@ -141,14 +162,23 @@ function Header({ onOpenStreak, streakCount = 0 }) {
       window.removeEventListener('storage', refresh)
     }
   }, [])
+  useEffect(() => {
+    // One-time welcome subtext after signup/login
+    const flag = localStorage.getItem('pyb.greetOnce')
+    if (flag) {
+      setWelcomeOnce('Welcome back!')
+      localStorage.removeItem('pyb.greetOnce')
+      setTimeout(() => setWelcomeOnce(''), 2000)
+    }
+  }, [])
   return (
     <header className="px-5 pt-6">
       <div className="rounded-2xl p-4 bg-gradient-to-r from-mint via-teal to-sky shadow-soft">
         <div className="flex items-center justify-between">
           {/* Left: Title and subtitle */}
           <div className="slide-up">
-            <h1 className="text-xl font-semibold text-slate-900">Hi Gangadhar 👋</h1>
-            <p className="text-slate-700 text-sm">Ready to pack your bags for your next adventure?</p>
+            <h1 className="text-xl font-semibold text-slate-900">Hi {userName ? userName : 'Gangadhar'} 👋</h1>
+            <p className="text-slate-700 text-sm">{welcomeOnce ? welcomeOnce : 'Ready to pack your bags for your next adventure?'}</p>
           </div>
           {/* Right: Buttons and avatar */}
           <div className="flex items-center gap-3 slide-up">
@@ -172,7 +202,7 @@ function Header({ onOpenStreak, streakCount = 0 }) {
             </button>
             {/* Avatar */}
             <button onClick={() => navigate('/profile')} aria-label="Profile" className="inline-block">
-              <img alt="Profile" src="https://api.dicebear.com/9.x/initials/svg?seed=G" className="w-9 h-9 rounded-full shadow-soft hover:translate-y-[-1px] transition-transform" />
+              <img alt="Profile" src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(avatarSeed)}`} className="w-9 h-9 rounded-full shadow-soft hover:translate-y-[-1px] transition-transform" />
             </button>
           </div>
         </div>
@@ -628,11 +658,19 @@ function StreakCalendar({ open, onClose, today, streakDays = [], randomFireSet =
 }
 
 function Dashboard() {
+  const navigate = useNavigate()
   const [localGroups, setLocalGroups] = useState([])
   const [userGoals, setUserGoals] = useState([])
   const [withdrawOpen, setWithdrawOpen] = useState(false)
   const [withdrawTrip, setWithdrawTrip] = useState(null)
   const [withdrawMsg, setWithdrawMsg] = useState('')
+  // Redirect unauthenticated users to Landing
+  useEffect(() => {
+    try {
+      const hasUser = !!localStorage.getItem('pyb.user')
+      if (!hasUser) navigate('/landing', { replace: true })
+    } catch {}
+  }, [navigate])
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('tripjar.groups') || '[]')
@@ -889,6 +927,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
+      <Route path="/landing" element={<Landing />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<SignUp />} />
       <Route path="/groups" element={<Groups />} />
       <Route path="/groups/goa-squad" element={<GoaGroup goals={goalsData} />} />
       <Route path="/onboarding" element={<Onboarding />} />
