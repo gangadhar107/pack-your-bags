@@ -44,33 +44,14 @@ export default function BottomNav({ goals }) {
           </div>
         )}
       </NavLink>
-      {(groupEntries.length > 0 || soloEntries.length > 0) && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 bg-white rounded-xl shadow-soft p-3 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
-          <div className="text-xs text-slate-500 mb-2">Existing Trips</div>
-          {/* Groups with per-user savings */}
-          {groupEntries.slice(0, 2).map((g, i) => (
-            <div key={`grp-${i}`} className="flex justify-between text-sm mb-1">
-              <span className="text-slate-700 truncate mr-2">Group: {g.title}</span>
-              <span className="text-slate-600">₹{(g.yourSaved || 0).toLocaleString('en-IN')} / ₹{(g.yourShare || 0).toLocaleString('en-IN')}</span>
-            </div>
-          ))}
-          {/* Solo Trips */}
-          {soloEntries.slice(0, 2).map((g, i) => (
-            <div key={`solo-${i}`} className="flex justify-between text-sm mb-1 last:mb-0">
-              <span className="text-slate-700 truncate mr-2">Solo: {g.title}</span>
-              <span className="text-slate-600">₹{(g.current || 0).toLocaleString('en-IN')} / ₹{(g.total || 0).toLocaleString('en-IN')}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 
   return (
     <nav className="floating-nav">
       <Item to="/" icon="🏠" label="Dashboard" baseClass="px-2 py-1" activeClass="bg-gradient-to-r from-teal to-sky text-white shadow-soft" />
-      <CenterItem to="/create-trip" icon="➕" label="Create Trip" />
-      <Item to="/earn" icon="💸" label="Rewards" baseClass="px-2 py-1" activeClass="bg-gradient-to-r from-teal to-sky text-white shadow-soft" />
+      <CenterItem to="/create-trip" icon="➕" label="Create Goal" />
+      <Item to="/earn" icon="🎁" label="Rewards" baseClass="px-2 py-1" activeClass="bg-gradient-to-r from-teal to-sky text-white shadow-soft" />
     </nav>
   )
 }

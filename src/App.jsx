@@ -175,18 +175,17 @@ function Header({ onOpenStreak, streakCount = 0 }) {
   return (
     <header className="px-5 pt-6">
       <div className="rounded-2xl p-4 bg-gradient-to-r from-mint via-teal to-sky shadow-soft">
-        <div className="flex items-center justify-between">
+        <div className="grid grid-cols-[1fr_auto] items-center">
           {/* Left: Title and subtitle */}
           <div className="slide-up">
             <h1 className="text-xl font-semibold text-slate-900">Hi {userName ? userName : 'Gangadhar'} 👋</h1>
-            <p className="text-slate-700 text-sm">{welcomeOnce ? welcomeOnce : 'Ready to pack your bags for your next adventure?'}</p>
           </div>
           {/* Right: Buttons and avatar */}
-          <div className="flex items-center gap-3 slide-up">
+          <div className="flex items-center gap-2 slide-up shrink-0">
             {/* Referral earnings */}
             <button
               onClick={() => navigate('/earn')}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-br from-mint to-white text-slate-800 shadow-soft hover:translate-y-[-1px] transition-transform"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-br from-mint to-white text-slate-800 shadow-soft hover:translate-y-[-1px] transition-transform whitespace-nowrap"
               aria-label="Referral earnings"
             >
               <span>💰</span>
@@ -195,7 +194,7 @@ function Header({ onOpenStreak, streakCount = 0 }) {
             {/* Streak button */}
             <button
               onClick={() => (typeof onOpenStreak === 'function' ? onOpenStreak() : navigate('/?streak=1'))}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-br from-orange to-coral text-white shadow-soft hover:shadow-lg transition-all"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-br from-orange to-coral text-white shadow-soft hover:shadow-lg transition-all whitespace-nowrap"
               aria-label="Savings streak"
             >
               <span>🔥</span>
@@ -245,7 +244,7 @@ function SavingsSummary({ goals, groups = [] }) {
     <section className="px-5 mt-5">
       <div className="card slide-up">
         <div className="accent-bar bg-gradient-to-r from-teal to-sky" />
-        <div className="p-4 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-4">
           <div className="justify-self-start">
             <h2 className="text-sm text-slate-600 font-medium">Total Savings</h2>
             <div className="text-3xl font-bold bg-gradient-to-r from-teal to-sky bg-clip-text text-transparent">₹{amount.toLocaleString('en-IN')}</div>
@@ -258,10 +257,12 @@ function SavingsSummary({ goals, groups = [] }) {
               </div>
             </div>
           </div>
-          <button onClick={() => navigate('/add-money')} className="justify-self-end bounce-soft bg-orange-gradient text-white rounded-full px-4 py-2 shadow-soft inline-flex items-center gap-2">
-            <span className="text-lg">➕</span>
-            <span className="font-semibold">Add Money</span>
-          </button>
+          <div className="sm:justify-self-end w-full sm:w-auto">
+            <button onClick={() => navigate('/add-money')} className="w-full sm:w-auto bounce-soft bg-orange-gradient text-white rounded-full px-4 py-2 shadow-soft inline-flex items-center justify-center gap-2">
+              <span className="text-lg">➕</span>
+              <span className="font-semibold">Add Money</span>
+            </button>
+          </div>
         </div>
       </div>
     </section>

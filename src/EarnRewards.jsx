@@ -160,16 +160,10 @@ export default function EarnRewards() {
             <h1 className="text-lg font-semibold">Earn Rewards 💰</h1>
             <NavLink to="/" className="card px-3 py-1 text-sm">Back</NavLink>
           </div>
-          <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-            <div>
-              <div className="text-sm text-slate-700">Heading</div>
-              <div className="text-xl font-bold">Earn ₹200 by inviting 3 friends!</div>
-              <div className="mt-2 text-sm text-slate-600">Current earnings: <span className="font-semibold">₹{earnings.toLocaleString('en-IN')}</span></div>
-            </div>
-            <div className="justify-self-center">
-              <CircularRing percent={percent} color="#22c55e" label={`${joined}/${goalFriends} joined`} />
-            </div>
-            <div className="justify-self-end">
+          <div className="mt-3 flex flex-col items-center text-center gap-2">
+            <div className="text-xl font-bold">Earn ₹200 by inviting 3 friends!</div>
+            <div className="text-sm text-slate-600">Current earnings: <span className="font-semibold">₹{earnings.toLocaleString('en-IN')}</span></div>
+            <div className="w-full flex justify-end">
               <button onClick={handleShare} className="bounce-soft bg-orange-gradient text-white rounded-full px-4 py-2 shadow-soft inline-flex items-center gap-2">
                 <span className="text-lg">📤</span>
                 <span className="font-semibold">Share</span>

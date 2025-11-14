@@ -119,11 +119,11 @@ export default function NewSoloTrip() {
   return (
     <div className="min-h-screen pb-24">
       <header className="flex items-center gap-3 px-5 pt-6 slide-up">
-        <button aria-label="Back" onClick={() => navigate('/')} className="card p-2 bounce-soft">←</button>
+        <button aria-label="Back" onClick={() => navigate(-1)} className="card p-2 bounce-soft">←</button>
         <h1 className="text-lg font-semibold">New Solo Trip</h1>
       </header>
       <section className="px-5 mt-5">
-        <div className="card p-5 slide-up">
+        <div className="card p-5 slide-up relative overflow-hidden">
           <div className="grid gap-4 pt-3">
             <FloatingField label="Trip Name" value={tripName} onChange={(e) => setTripName(e.target.value)} />
           <div className="relative">
@@ -162,7 +162,7 @@ export default function NewSoloTrip() {
                 reader.onload = () => setImage(String(reader.result || ''))
                 reader.readAsDataURL(file)
               }}
-              className="rounded-xl border border-slate-200 px-3 py-2 bg-white"
+              className="rounded-xl border border-slate-200 px-3 py-2 bg-white w-full"
             />
           </div>
           <FloatingField label="Total Budget (₹)" value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^0-9]/g, ''))} />
@@ -177,7 +177,7 @@ export default function NewSoloTrip() {
               Create Trip
             </button>
             {!canCreate && (
-              <p className="text-xs text-red-600">Trip Name, a valid Trip Destination (from suggestions), Month and Budget are required.</p>
+              <p className="text-xs text-red-600 break-words">Trip Name, a valid Trip Destination (from suggestions), Month and Budget are required.</p>
             )}
           </div>
         </div>

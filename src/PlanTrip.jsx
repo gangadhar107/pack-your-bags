@@ -232,13 +232,13 @@ export default function PlanTrip() {
   return (
     <div className="min-h-screen pb-24">
       <header className="flex items-center gap-3 px-5 pt-6 slide-up">
-        <button aria-label="Back" onClick={() => navigate('/groups')} className="card p-2 bounce-soft">←</button>
+        <button aria-label="Back" onClick={() => navigate(-1)} className="card p-2 bounce-soft">←</button>
         <h1 className="text-lg font-semibold">Plan a trip together! 🚀</h1>
       </header>
 
       {step === 1 && (
         <section className="px-5 mt-5">
-          <div className="card p-5 slide-up">
+          <div className="card p-5 slide-up relative overflow-hidden">
             <div className="grid gap-4 pt-3">
               <FloatingField label="Group Name" value={tripName} onChange={(e) => setTripName(e.target.value)} />
               <div className="relative">
@@ -278,7 +278,7 @@ export default function PlanTrip() {
                     reader.onload = () => setImage(String(reader.result || ''))
                     reader.readAsDataURL(file)
                   }}
-                  className="rounded-xl border border-slate-200 px-3 py-2 bg-white"
+                  className="rounded-xl border border-slate-200 px-3 py-2 bg-white w-full"
                 />
               </div>
               <FloatingField label="Month" type="month" value={date ? date.slice(0,7) : ''} onChange={(e) => setDate(e.target.value + '-01')} />
@@ -295,7 +295,7 @@ export default function PlanTrip() {
                 Next: Invite Friends
               </button>
               {(!tripName?.trim() || !destPlaceId || !date) && (
-                <p className="text-xs text-red-600 mt-2">Group Name, a valid Trip Destination (from suggestions), and Month are required.</p>
+                <p className="text-xs text-red-600 mt-2 break-words">Group Name, a valid Trip Destination (from suggestions), and Month are required.</p>
               )}
             </div>
           </div>
@@ -304,7 +304,7 @@ export default function PlanTrip() {
 
       {step === 2 && (
         <section className="px-5 mt-5">
-          <div className="card p-5 slide-up">
+          <div className="card p-5 slide-up relative overflow-hidden">
             <div className="mt-1 flex items-center justify-between">
               <div className="text-sm text-slate-600">Invite friends</div>
               <div className="flex items-center gap-2">
