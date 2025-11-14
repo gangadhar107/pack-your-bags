@@ -17,6 +17,7 @@ import GoalDetail from './GoalDetail'
 import AddMoneyPage from './AddMoneyPage'
 import WithdrawModal from './WithdrawModal'
 import NewSoloTrip from './NewSoloTrip'
+import CreateTripSelector from './CreateTripSelector'
 
 // Shared goals data used by both the summary and goals list
 const goalsData = [
@@ -941,6 +942,7 @@ export default function App() {
       <Route path="/plan-trip" element={<PlanTrip />} />
       <Route path="/goal-detail" element={<GoalDetail goals={goalsData} />} />
       <Route path="/add-money" element={<AddMoneyRoute />} />
+      <Route path="/create-trip" element={<CreateTripSelector />} />
     </Routes>
   )
 }

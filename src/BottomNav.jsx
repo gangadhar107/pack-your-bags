@@ -69,10 +69,8 @@ export default function BottomNav({ goals }) {
   return (
     <nav className="floating-nav">
       <Item to="/" icon="🏠" label="Dashboard" baseClass="px-2 py-1" activeClass="bg-gradient-to-r from-teal to-sky text-white shadow-soft" />
-      <Item to="/groups" icon="👥" label="Groups" baseClass="px-2 py-1" activeClass="bg-gradient-to-r from-teal to-sky text-white shadow-soft" />
-      <CenterItem to="/new-solo-trip" icon="➕" label="New Solo Trip" />
-      <Item to="/earn" icon="💸" label="Earn" baseClass="px-2 py-1" activeClass="bg-gradient-to-r from-teal to-sky text-white shadow-soft" />
-      <Item to="/profile" icon="👤" label="Profile" baseClass="px-2 py-1" activeClass="bg-gradient-to-r from-teal to-sky text-white shadow-soft" />
+      <CenterItem to="/create-trip" icon="➕" label="Create Trip" />
+      <Item to="/earn" icon="💸" label="Rewards" baseClass="px-2 py-1" activeClass="bg-gradient-to-r from-teal to-sky text-white shadow-soft" />
     </nav>
   )
 }
