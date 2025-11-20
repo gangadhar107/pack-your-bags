@@ -284,8 +284,11 @@ function GoalCard({ title, current, total, percent, destination, imageSrc, inter
       {deletable && (
         <button
           className="absolute top-2 right-2 text-xs px-2 py-1 bg-red-500 text-white rounded"
-          onClick={(e) => { e.stopPropagation(); if (onDelete) onDelete() }}
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation() }}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (onDelete) onDelete() }}
           title="Delete goal"
+          type="button"
+          data-stop-nav="1"
         >
           Delete
         </button>
@@ -406,6 +409,7 @@ function UnifiedGroupCard({ group }) {
 }
 
 function ActiveGoals({ goals, groups = [] }) {
+  const navigate = useNavigate()
   const deleteGoal = (id) => {
     try {
       const raw = localStorage.getItem('tripjar.userGoals')
@@ -493,19 +497,43 @@ function ActiveGoals({ goals, groups = [] }) {
             destination: g.destination || '',
             date: g.date || '',
           }).toString()
+          const to = `/goal-detail?${params}`
+          const stopNavIfDelete = (e) => {
+            const n = e.nativeEvent
+            const path = (typeof n.composedPath === 'function') ? n.composedPath() : []
+            for (const el of path) {
+              if (el && el.getAttribute && (el.getAttribute('data-stop-nav') || (el.dataset && el.dataset.stopNav))) {
+                e.preventDefault()
+                e.stopPropagation()
+                return
+              }
+            }
+          }
           return (
-            <NavLink key={idx} to={`/goal-detail?${params}`} className="w-full">
-              <GoalCard
-                title={g.title}
-                current={g.current}
-                total={g.total}
-                percent={percent}
-                imageSrc={g.image}
-                destination={g.destination}
-                deletable={!!canDelete}
-                onDelete={() => deleteGoal(g.id)}
-              />
-            </NavLink>
+            <div key={idx} className="w-full relative">
+              <div
+                onClick={() => navigate(to)}
+              >
+                <GoalCard
+                  title={g.title}
+                  current={g.current}
+                  total={g.total}
+                  percent={percent}
+                  imageSrc={g.image}
+                  destination={g.destination}
+                  deletable={false}
+                />
+              </div>
+              {canDelete && (
+                <button
+                  className="absolute top-2 right-2 text-xs px-2 py-1 bg-red-500 text-white rounded z-20"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteGoal(g.id) }}
+                  type="button"
+                >
+                  Delete
+                </button>
+              )}
+            </div>
           )
         })}
         {groups.map((grp, i) => (
