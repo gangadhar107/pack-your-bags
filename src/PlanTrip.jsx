@@ -42,10 +42,6 @@ export default function PlanTrip() {
   const [placesReady, setPlacesReady] = useState(false)
   const [sessionToken, setSessionToken] = useState(null)
   const [image, setImage] = useState('')
-  const [durationDays, setDurationDays] = useState('')
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiPlan, setAiPlan] = useState(null)
-  const [aiOpen, setAiOpen] = useState(false)
 
   // Local mock dataset for destinations (used for autocomplete now)
   const mockDestinations = [
@@ -120,53 +116,19 @@ export default function PlanTrip() {
     setPlacesReady(!!(window.google && window.google.maps && window.google.maps.places))
   }
 
-  const aiMeta = {
-    'Goa': { budget: 60000, days: 4, label: 'Top Pick' },
-    'Gokarna': { budget: 40000, days: 4, label: 'Budget-Friendly' },
-    'Golden Temple': { budget: 36000, days: 3, label: 'Trending Destination' },
-    'Jaipur': { budget: 42000, days: 3, label: 'Top Pick' },
-    'Manali': { budget: 56000, days: 5, label: 'Trending Destination' },
-    'Kerala': { budget: 70000, days: 6, label: 'Top Pick' },
-    'Ladakh': { budget: 110000, days: 7, label: 'Trending Destination' },
-    'Andaman': { budget: 100000, days: 6, label: 'Top Pick' },
-    'Phuket': { budget: 120000, days: 5, label: 'Trending Destination' },
-    'Dubai': { budget: 140000, days: 5, label: 'Trending Destination' },
-    'Singapore': { budget: 130000, days: 4, label: 'Top Pick' },
-    'Bali': { budget: 136000, days: 6, label: 'Top Pick' },
-    'Kedarnath': { budget: 50000, days: 4, label: 'Budget-Friendly' },
-    'Kashmir': { budget: 80000, days: 6, label: 'Top Pick' },
-    'Darjeeling': { budget: 48000, days: 4, label: 'Budget-Friendly' },
-    'Ooty': { budget: 44000, days: 3, label: 'Budget-Friendly' },
-    'Coorg': { budget: 46000, days: 3, label: 'Budget-Friendly' },
-    'Munnar': { budget: 52000, days: 4, label: 'Trending Destination' },
-    'Rishikesh': { budget: 40000, days: 3, label: 'Budget-Friendly' },
-    'Hampi': { budget: 42000, days: 3, label: 'Budget-Friendly' },
-    'Varanasi': { budget: 40000, days: 3, label: 'Trending Destination' },
-    'Agra': { budget: 36000, days: 2, label: 'Budget-Friendly' },
-    'Delhi': { budget: 44000, days: 3, label: 'Trending Destination' },
-    'Mumbai': { budget: 50000, days: 3, label: 'Trending Destination' },
-  }
-  const aiLabels = ['Top Pick', 'Trending Destination', 'Budget-Friendly']
   const queryDestinations = async (q) => {
     const term = String(q || '').trim().toLowerCase()
     if (!term) { setDestPredictions([]); setShowDestSuggestions(false); setDestError(''); return }
-    const base = mockDestinationsUnique.filter((d) => d.toLowerCase().includes(term))
-    const top5 = base.slice(0, 5)
-    const mapped = top5.map((d, i) => {
-      const meta = aiMeta[d] || {}
-      const label = meta.label || aiLabels[i % aiLabels.length]
-      const budget = meta.budget || (d.length > 6 ? 56000 : 44000)
-      const days = meta.days || (d.length > 6 ? 5 : 3)
-      return { name: d, label, budget, days, place_id: 'mock:' + slugify(d) }
-    })
-    if (mapped.length) {
-      setDestPredictions(mapped)
+    const matches = mockDestinationsUnique
+      .filter((d) => d.toLowerCase().includes(term))
+      .slice(0, 8)
+      .map((d) => ({ description: d, place_id: 'mock:' + slugify(d) }))
+    if (matches.length) {
+      setDestPredictions(matches)
       setDestError('')
     } else {
-      const pool = mockDestinationsUnique.slice().sort(() => Math.random() - 0.5)
-      const random3 = pool.slice(0, 3).map((d, i) => ({ name: d, label: aiLabels[i % aiLabels.length], budget: (d.length > 6 ? 56000 : 44000), days: (d.length > 6 ? 5 : 3), place_id: 'mock:' + slugify(d) }))
-      setDestPredictions(random3)
-      setDestError('No exact matches — here are smart recommendations')
+      setDestPredictions([])
+      setDestError('No matching destination found.')
     }
     setShowDestSuggestions(true)
   }
@@ -287,69 +249,20 @@ export default function PlanTrip() {
                   onFocus={() => setShowDestSuggestions(destPredictions.length > 0)}
                 />
                 {showDestSuggestions && (
-                  <div className="absolute left-0 right-0 mt-1 rounded-xl border border-slate-200 bg-white shadow-soft max-h-64 overflow-auto z-20">
-                    {destError && <div className="px-3 pt-2 text-xs text-slate-500">{destError}</div>}
-                    <div className="grid gap-2 p-2">
-                      {destPredictions.map((p, idx) => (
-                        <button
-                          key={p.place_id}
-                          onClick={() => {
-                            setTripDestination(p.name || '')
-                            setDestPlaceId(p.place_id || '')
-                            setBudget(String(p.budget || ''))
-                            setDurationDays(String(p.days || ''))
-                            setDestPredictions([])
-                            setShowDestSuggestions(false)
-                            setDestError('')
-                            setSessionToken(null)
-                          }}
-                          className="text-left"
-                        >
-                          <div className="ai-shimmer rounded-lg border border-slate-200 p-3 bg-white">
-                            <div className="flex items-center justify-between">
-                              <div className="font-semibold">{p.name}</div>
-                              <div className="text-xs px-2 py-0.5 rounded-full bg-teal/10 text-teal">{p.label}</div>
-                            </div>
-                            <div className="mt-1 text-xs text-slate-600">Suggested budget ₹{Number(p.budget || 0).toLocaleString('en-IN')} • {p.days} days</div>
-                          </div>
+                  <div className="absolute left-0 right-0 mt-1 rounded-xl border border-slate-200 bg-white shadow-soft max-h-52 overflow-auto z-20">
+                    {destPredictions.length > 0 ? (
+                      destPredictions.map((p) => (
+                        <button key={p.place_id} onClick={() => onSelectPrediction(p)} className="w-full text-left px-3 py-2 hover:bg-slate-50">
+                          <div className="text-sm">{p.description}</div>
                         </button>
-                      ))}
-                    </div>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-sm text-slate-500">{destError || 'No matching destination found.'}</div>
+                    )}
                   </div>
                 )}
               </div>
               <FloatingField label="Total budget (₹)" value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^0-9]/g, ''))} />
-              {(function(){
-                const total = parseInt(budget || '0', 10)
-                const d = date
-                if (!d || total <= 0) return null
-                const dest = new Date(d)
-                const destYear = dest.getFullYear()
-                const destMonth = dest.getMonth() + 1
-                const now = new Date()
-                const curYear = now.getFullYear()
-                const curMonth = now.getMonth() + 1
-                const months = (destMonth + 12 * destYear) - (curMonth + 12 * curYear)
-                if (months <= 0) return null
-                const recommendedMonthly = Math.ceil(total / months)
-                const recommendedWeekly = Math.ceil(recommendedMonthly / 4)
-                const recommendedDaily = Math.ceil(recommendedMonthly / 30)
-                let tone = 'green'
-                let warning = 'Great choice! Your current plan is financially stable.'
-                if (months < 2 && total >= 100000) { tone = 'red'; warning = 'This trip requires aggressive saving — consider increasing your timeline' }
-                else if (months <= 3) { tone = 'yellow'; warning = 'Timeline is tight. Stay disciplined to meet the goal.' }
-                const boxClass = tone === 'green' ? 'border-green-200 bg-green-50' : tone === 'yellow' ? 'border-yellow-200 bg-yellow-50' : 'border-red-200 bg-red-50'
-                const warnClass = tone === 'green' ? 'text-green-700' : tone === 'yellow' ? 'text-yellow-700' : 'text-red-700'
-                return (
-                  <div className={`rounded-xl border p-3 mt-1 ${boxClass}`}>
-                    <div className="text-xs text-slate-600">Based on your travel goal, here's a smart saving plan:</div>
-                    <div className="mt-1 text-sm">Save ₹{recommendedMonthly.toLocaleString('en-IN')} per month</div>
-                    <div className="text-sm">To stay on track, save ₹{recommendedWeekly.toLocaleString('en-IN')} per week</div>
-                    <div className="text-sm">Or ₹{recommendedDaily.toLocaleString('en-IN')} per day</div>
-                    <div className={`mt-1 text-xs ${warnClass}`}>{warning}</div>
-                  </div>
-                )
-              })()}
               <div className="grid gap-2">
                 <div className="text-sm text-slate-700">Trip Picture</div>
                 {image && (
@@ -369,71 +282,10 @@ export default function PlanTrip() {
                 />
               </div>
               <FloatingField label="Month" type="month" value={date ? date.slice(0,7) : ''} onChange={(e) => setDate(e.target.value + '-01')} />
-              <FloatingField label="Trip Duration (days)" value={durationDays} onChange={(e) => setDurationDays(e.target.value.replace(/[^0-9]/g, ''))} />
               <FloatingField label="Expected members" value={members} onChange={(e) => setMembers(e.target.value.replace(/[^0-9]/g, ''))} />
               <FloatingField label="Minimum monthly save (₹)" value={String(minMonthly)} onChange={() => {}} />
 
               <p className="text-sm text-slate-700">Each needs to save <span className="font-semibold">₹{perPerson.toLocaleString('en-IN')}</span></p>
-
-              <div className="flex items-center gap-3">
-                <button onClick={handleGenerate} className="bounce-soft bg-gradient-to-r from-teal to-orange text-white rounded-full px-4 py-2 shadow-soft font-semibold">Generate Trip Plan (AI)</button>
-                {aiLoading && <div className="text-xs text-slate-600">Analyzing your inputs…</div>}
-              </div>
-              {aiOpen && (
-                <div className="ai-glow p-[1px] rounded-xl bg-gradient-to-r from-teal to-orange">
-                  <div className="rounded-xl bg-white p-4">
-                    <button onClick={() => setAiOpen(!aiOpen)} className="text-sm font-semibold">{aiOpen ? 'Collapse' : 'Expand'}</button>
-                    {aiLoading && (
-                      <div className="mt-2 grid gap-2">
-                        <div className="ai-bar" />
-                        <div className="text-xs text-slate-600">AI Analyzing…</div>
-                        <div className="ai-shimmer h-4 rounded bg-slate-100" />
-                        <div className="ai-shimmer h-4 rounded bg-slate-100" />
-                        <div className="ai-shimmer h-4 rounded bg-slate-100" />
-                      </div>
-                    )}
-                    {!aiLoading && aiPlan && (
-                      <div className="mt-2 grid gap-2">
-                        <div className="text-sm">{aiIntroTyped}<span className="typing-cursor">|</span></div>
-                        <div className="text-sm">Suggested budget: ₹{aiPlan.budgetLow.toLocaleString('en-IN')} – ₹{aiPlan.budgetHigh.toLocaleString('en-IN')}</div>
-                        <div className="text-sm">Best time to visit: {aiPlan.bestTimeText}</div>
-                        <div className="text-sm">Recommended duration: {aiPlan.duration} days</div>
-                        <div className="mt-2">
-                          {aiPlan.itinerary.map((line, idx) => (
-                            <div key={idx} className="text-sm">{line}</div>
-                          ))}
-                        </div>
-                        <div className="mt-2 text-sm">Savings plan: Monthly ₹{aiPlan.savings.monthly.toLocaleString('en-IN')} • Weekly ₹{aiPlan.savings.weekly.toLocaleString('en-IN')} • Daily ₹{aiPlan.savings.daily.toLocaleString('en-IN')}</div>
-                        <div className="mt-1 text-sm text-teal">{aiPlan.tip}</div>
-                        <div className="mt-3 flex items-center gap-3">
-                          <button
-                            onClick={() => {
-                              setBudget(String(aiPlan.budgetHigh))
-                              setDurationDays(String(aiPlan.duration))
-                              setDate(aiPlan.recommendedDate)
-                            }}
-                            className="bounce-soft bg-teal-sky text-white rounded-full px-4 py-2 shadow-soft font-semibold"
-                          >
-                            Apply to Form
-                          </button>
-                          <button onClick={handleGenerate} className="text-teal font-semibold">Regenerate</button>
-                        </div>
-                        <div className="mt-3">
-                          <button onClick={() => setAiInsightsOpen(v => !v)} className="text-sm font-semibold">AI Insights</button>
-                          {aiInsightsOpen && (
-                            <div className="mt-2 grid gap-1">
-                              <div className="text-xs text-slate-600">You're just one step away from planning the perfect trip!</div>
-                              {String(tripDestination).toLowerCase().includes('goa') && (
-                                <div className="text-xs text-teal">Great choice — Goa trips cost 20–40% less off-season!</div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
               <button
                 onClick={() => setStep(2)}
@@ -503,69 +355,3 @@ export default function PlanTrip() {
     </div>
   )
 }
-  const bestTimeMap = {
-    Goa: '11',
-    Manali: '06',
-    Ladakh: '07',
-    Jaipur: '12',
-    Ooty: '10',
-    Coorg: '09',
-    Munnar: '09',
-    Darjeeling: '04',
-    Rishikesh: '03',
-    Kerala: '12',
-    Andaman: '01',
-    Kashmir: '08',
-  }
-  const funPool = ['Beach shack', 'Scenic viewpoint', 'Local cafe', 'Sunrise point', 'Street food lane', 'Museum', 'Boat ride', 'Night market']
-  const emojis = ['✨','🌟','🏝️','🏞️','🏔️','🚌','🗺️','🍽️','☕','📸']
-
-  const generatePlan = () => {
-    const name = String(tripDestination || '').trim()
-    const baseBudget = parseInt(budget || '50000', 10)
-    const low = Math.round(baseBudget * 0.8)
-    const high = Math.round(baseBudget * 1.2)
-    const rand = 1 + ((Math.random() * 0.2) - 0.1)
-    const lowAdj = Math.round(low * rand)
-    const highAdj = Math.round(high * rand)
-    const dur = Math.max(3, Math.min(5, (Math.random() < 0.5 ? 4 : 5)))
-    const e1 = emojis[Math.floor(Math.random() * emojis.length)]
-    const e2 = emojis[Math.floor(Math.random() * emojis.length)]
-    const picks = funPool.sort(() => Math.random() - 0.5).slice(0, 2)
-    const now = new Date()
-    const year = now.getFullYear()
-    const bestMonth = bestTimeMap[name] || '12'
-    const recommendedDate = `${year}-${bestMonth}-01`
-    const itinerary = new Array(dur).fill(0).map((_, i) => {
-      const d = i + 1
-      const act = picks[i % picks.length]
-      return `Day ${d}: Explore ${name || 'the destination'} • ${act}`
-    })
-    const months = 6
-    const monthly = Math.ceil(highAdj / months)
-    const weekly = Math.ceil(monthly / 4)
-    const daily = Math.ceil(monthly / 30)
-    const intro = `Here’s a personalized plan ${e1}`
-    const tip = `Pro Tip: Stay consistent — your group’s savings grow fast ${e2}`
-    return {
-      intro,
-      budgetLow: lowAdj,
-      budgetHigh: highAdj,
-      bestTimeText: bestMonth === '12' ? 'Oct–Mar' : 'Great in this month',
-      duration: dur,
-      itinerary,
-      savings: { monthly, weekly, daily },
-      tip,
-      recommendedDate,
-    }
-  }
-
-  const handleGenerate = () => {
-    setAiLoading(true)
-    setAiOpen(true)
-    setTimeout(() => {
-      const plan = generatePlan()
-      setAiPlan(plan)
-      setAiLoading(false)
-    }, 1200)
-  }
