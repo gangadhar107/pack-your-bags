@@ -132,7 +132,7 @@ export default function GoaGroup({ goals = [] }) {
     <div className="min-h-screen pb-40">
       {/* Header */}
       <header className="flex items-center gap-3 px-5 pt-6 slide-up">
-        <button aria-label="Back" onClick={() => navigate('/groups')} className="card p-2 bounce-soft">←</button>
+        <button aria-label="Back" onClick={() => navigate('/')} className="card p-2 bounce-soft">←</button>
         <h1 className="text-lg font-semibold">Goa Squad 🏖️</h1>
       </header>
 
